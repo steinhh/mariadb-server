@@ -887,6 +887,8 @@ typedef struct system_variables
   vers_asof_timestamp_t vers_asof_timestamp;
   ulong vers_alter_history;
   my_bool binlog_alter_two_phase;
+
+  Charset_collation_map_st character_set_collations;
 } SV;
 
 /**
@@ -2925,7 +2927,9 @@ public:
 
   typedef uint used_t;
   enum { RAND_USED=1, TIME_ZONE_USED=2, QUERY_START_SEC_PART_USED=4,
-         THREAD_SPECIFIC_USED=8 };
+         THREAD_SPECIFIC_USED=8,
+         CHARACTER_SET_COLLATIONS_USED= 16
+       };
 
   used_t used;
 
@@ -5616,6 +5620,29 @@ public:
         lex->sql_command != SQLCOM_LOAD)
       return false;
     return !is_set_timestamp_forbidden(this);
+  }
+};
+
+
+class Character_set_collations_used: public Charset_collation_map_st::Used
+{
+  THD *m_thd;
+public:
+  Character_set_collations_used(THD *thd)
+   :m_thd(thd)
+  { }
+  ~Character_set_collations_used()
+  {
+    /*
+      Mark THD that the collation map was used,
+      no matter if a compiled or a mapped collation was
+      found during charset->collation resolution.
+      Even if the map was empty, we still need to print
+        SET @@session.character_set_collations='';
+      in mariadb-binlog output.
+    */
+    if (m_used)
+      m_thd->used|= THD::CHARACTER_SET_COLLATIONS_USED;
   }
 };
 

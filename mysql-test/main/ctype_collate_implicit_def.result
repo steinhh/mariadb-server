@@ -1,0 +1,60 @@
+#
+# MDEV-30164 System variable for default collations
+#
+SELECT @@global.character_set_collations;
+@@global.character_set_collations
+latin1=latin1_bin,utf8mb3=utf8mb3_uca1400_ai_ci
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+latin1=latin1_bin,utf8mb3=utf8mb3_uca1400_ai_ci
+SELECT COLLATION('literal');
+COLLATION('literal')
+latin1_bin
+SET NAMES utf8mb3;
+SELECT COLLATION('literal');
+COLLATION('literal')
+utf8mb3_uca1400_ai_ci
+SET @@session.character_set_collations='latin1=latin1_german2_ci';
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+latin1=latin1_german2_ci
+SET @@session.character_set_collations=DEFAULT;
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+latin1=latin1_bin,utf8mb3=utf8mb3_uca1400_ai_ci
+SET @@global.character_set_collations='utf8mb3=uca1400_as_ci,latin1=latin1_danish_ci';
+connect  con1,localhost,root,,;
+connection con1;
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+latin1=latin1_danish_ci,utf8mb3=utf8mb3_uca1400_as_ci
+SELECT COLLATION('literal');
+COLLATION('literal')
+latin1_danish_ci
+disconnect con1;
+connection default;
+SET @@global.character_set_collations=DEFAULT;
+SELECT @@global.character_set_collations;
+@@global.character_set_collations
+
+connect  con2,localhost,root,,;
+connection con2;
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+
+SELECT COLLATION('literal');
+COLLATION('literal')
+latin1_swedish_ci
+disconnect con2;
+connection default;
+SET @@global.character_set_collations='utf8mb3=uca1400_ai_ci,latin1=latin1_bin';
+connect  con3,localhost,root,,;
+connection con3;
+SELECT @@session.character_set_collations;
+@@session.character_set_collations
+latin1=latin1_bin,utf8mb3=utf8mb3_uca1400_ai_ci
+SELECT COLLATION('literal');
+COLLATION('literal')
+latin1_bin
+disconnect con3;
+connection default;

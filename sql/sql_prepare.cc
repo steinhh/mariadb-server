@@ -209,6 +209,7 @@ public:
   inline bool is_sql_prepare() const { return flags & (uint) IS_SQL_PREPARE; }
   void set_sql_prepare() { flags|= (uint) IS_SQL_PREPARE; }
   bool prepare(const char *packet, uint packet_length);
+  bool reprepare();
   bool execute_loop(String *expanded_query,
                     bool open_cursor,
                     uchar *packet_arg, uchar *packet_end_arg);
@@ -221,6 +222,10 @@ public:
   /* Destroy this statement */
   void deallocate();
   bool execute_immediate(const char *query, uint query_length);
+  uint prepare_time_charset_collation_map_version() const
+  {
+    return m_prepare_time_charset_collation_map_version;
+  }
 private:
   /**
     The memory root to allocate parsed tree elements (instances of Item,
@@ -228,13 +233,14 @@ private:
   */
   MEM_ROOT main_mem_root;
   sql_mode_t m_sql_mode;
+  THD::used_t m_prepare_time_thd_used_flags;
+  uint m_prepare_time_charset_collation_map_version;
 private:
   bool set_db(const LEX_CSTRING *db);
   bool set_parameters(String *expanded_query,
                       uchar *packet, uchar *packet_end);
   bool execute(String *expanded_query, bool open_cursor);
   void deallocate_immediate();
-  bool reprepare();
   bool validate_metadata(Prepared_statement  *copy);
   void swap_prepared_statement(Prepared_statement *copy);
 };
@@ -3538,6 +3544,13 @@ static void mysql_stmt_execute_common(THD *thd,
     DBUG_VOID_RETURN;
   }
 
+  if (stmt->prepare_time_charset_collation_map_version() !=
+      thd->variables.character_set_collations.version())
+  {
+    if (stmt->reprepare())
+      DBUG_VOID_RETURN;
+  }
+
   /*
     In case of direct execution application decides how many parameters
     to send.
@@ -3626,6 +3639,13 @@ void mysql_sql_stmt_execute(THD *thd)
     my_error(ER_UNKNOWN_STMT_HANDLER, MYF(0),
              static_cast<int>(name->length), name->str, "EXECUTE");
     DBUG_VOID_RETURN;
+  }
+
+  if (stmt->prepare_time_charset_collation_map_version() !=
+      thd->variables.character_set_collations.version())
+  {
+    if (stmt->reprepare())
+      DBUG_VOID_RETURN;
   }
 
   if (stmt->param_count != lex->prepared_stmt.param_count())
@@ -4125,7 +4145,9 @@ Prepared_statement::Prepared_statement(THD *thd_arg)
   iterations(0),
   start_param(0),
   read_types(0),
-  m_sql_mode(thd->variables.sql_mode)
+  m_sql_mode(thd->variables.sql_mode),
+  m_prepare_time_thd_used_flags(0),
+  m_prepare_time_charset_collation_map_version(0)
 {
   init_sql_alloc(key_memory_prepared_statement_main_mem_root,
                  &main_mem_root, thd_arg->variables.query_alloc_block_size,
@@ -4505,6 +4527,9 @@ bool Prepared_statement::prepare(const char *packet, uint packet_len)
   }
   // The same format as for triggers to compare
   hr_prepare_time= my_hrtime();
+  m_prepare_time_thd_used_flags= thd->used;
+  m_prepare_time_charset_collation_map_version=
+    thd->variables.character_set_collations.version();
   DBUG_RETURN(error);
 }
 
@@ -5060,6 +5085,13 @@ Prepared_statement::swap_prepared_statement(Prepared_statement *copy)
   /* Ditto */
   swap_variables(LEX_CSTRING, db, copy->db);
 
+  swap_variables(uint,
+                 m_prepare_time_charset_collation_map_version,
+                 copy->m_prepare_time_charset_collation_map_version);
+  swap_variables(THD::used_t,
+                 m_prepare_time_thd_used_flags,
+                 copy->m_prepare_time_thd_used_flags);
+
   DBUG_ASSERT(param_count == copy->param_count);
   DBUG_ASSERT(thd == copy->thd);
   last_error[0]= '\0';
@@ -5220,6 +5252,13 @@ bool Prepared_statement::execute(String *expanded_query, bool open_cursor)
       MYSQL_QUERY_EXEC_START(thd->query(), thd->thread_id, thd->get_db(),
                              &thd->security_ctx->priv_user[0],
                              (char *) thd->security_ctx->host_or_ip, 1);
+      /*
+        If PREPARE used @@character_set_collations,
+        then we need to make sure binary log writes
+        the map in the event header.
+      */
+      thd->used|= m_prepare_time_thd_used_flags &
+                  THD::CHARACTER_SET_COLLATIONS_USED;
       error= mysql_execute_command(thd, true);
       MYSQL_QUERY_EXEC_DONE(error);
       thd->update_server_status();

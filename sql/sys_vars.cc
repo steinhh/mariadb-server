@@ -436,6 +436,115 @@ static bool update_auto_increment_increment (sys_var *self, THD *thd, enum_var_t
 
 #endif /* WITH_WSREP */
 
+
+class Sys_var_charset_collation_map: public sys_var
+{
+public:
+  Sys_var_charset_collation_map(const char *name_arg, const char *comment,
+                                int flag_args, ptrdiff_t off, size_t size,
+                                CMD_LINE getopt,
+                                enum binlog_status_enum binlog_status_arg)
+   :sys_var(&all_sys_vars, name_arg, comment,
+            flag_args, off, getopt.id, getopt.arg_type,
+            SHOW_CHAR,
+            DEFAULT(0), nullptr, binlog_status_arg,
+            nullptr, nullptr, nullptr)
+  {
+    option.var_type|= GET_STR;
+  }
+
+private:
+
+  static bool charset_collation_map_from_item(Charset_collation_map_st *map,
+                                              Item *item,
+                                              myf utf8_flag)
+  {
+    String *value, buffer;
+    if (!(value= item->val_str_ascii(&buffer)))
+      return true;
+    return map->from_text(value->to_lex_cstring(), utf8_flag);
+  }
+
+  static const uchar *make_value_ptr(THD *thd,
+                                     const Charset_collation_map_st &map)
+  {
+    size_t nbytes= map.text_format_nbytes_needed();
+    char *buf= (char *) thd->alloc(nbytes);
+    size_t length= map.print(buf, nbytes);
+    return (uchar *) thd->strmake(buf, length);
+  }
+
+
+private:
+
+  bool do_check(THD *thd, set_var *var) override
+  {
+    Charset_collation_map_st map;
+    return charset_collation_map_from_item(&map, var->value,
+                                           thd->get_utf8_flag());
+  }
+
+  void session_save_default(THD *thd, set_var *var) override
+  {
+    thd->variables.character_set_collations.set(
+      global_system_variables.character_set_collations, 1);
+  }
+
+  void global_save_default(THD *thd, set_var *var) override
+  {
+    global_system_variables.character_set_collations.init();
+  }
+
+  bool session_update(THD *thd, set_var *var) override
+  {
+    Charset_collation_map_st map;
+    if (!var->value)
+    {
+      session_save_default(thd, var);
+      return false;
+    }
+    if (charset_collation_map_from_item(&map, var->value, thd->get_utf8_flag()))
+      return true;
+    thd->variables.character_set_collations.set(map, 1);
+    return false;
+  }
+
+  bool global_update(THD *thd, set_var *var) override
+  {
+    Charset_collation_map_st map;
+    if (!var->value)
+    {
+      global_save_default(thd, var);
+      return false;
+    }
+    if (charset_collation_map_from_item(&map, var->value, thd->get_utf8_flag()))
+      return true;
+    global_system_variables.character_set_collations= map;
+    return false;
+  }
+
+  const uchar *
+  session_value_ptr(THD *thd, const LEX_CSTRING *base) const override
+  {
+    return make_value_ptr(thd, thd->variables.character_set_collations);
+  }
+
+  const uchar *
+  global_value_ptr(THD *thd, const LEX_CSTRING *base) const override
+  {
+    return make_value_ptr(thd, global_system_variables.
+                                 character_set_collations);
+  }
+};
+
+
+static Sys_var_charset_collation_map Sys_character_set_collations(
+       "character_set_collations",
+       "Default collations for character sets",
+       SESSION_VAR(character_set_collations),
+       NO_CMD_LINE, NOT_IN_BINLOG);
+
+
 static Sys_var_double Sys_analyze_sample_percentage(
        "analyze_sample_percentage",
        "Percentage of rows from the table ANALYZE TABLE will sample "

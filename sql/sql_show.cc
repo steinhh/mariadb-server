@@ -6238,7 +6238,10 @@ int fill_schema_charsets(THD *thd, TABLE_LIST *tables, COND *cond)
       const char *comment;
       restore_record(table, s->default_values);
       table->field[0]->store(&tmp_cs->cs_name, scs);
-      table->field[1]->store(&tmp_cs->coll_name, scs);
+      Character_set_collations_used used(thd);
+      CHARSET_INFO *def_cl= thd->variables.character_set_collations.
+                               get_collation_for_charset(&used, tmp_cs);
+      table->field[1]->store(&def_cl->coll_name, scs);
       comment= tmp_cs->comment ? tmp_cs->comment : "";
       table->field[2]->store(comment, strlen(comment), scs);
       table->field[3]->store((longlong) tmp_cs->mbmaxlen, TRUE);
@@ -6341,6 +6344,9 @@ int fill_schema_collation(THD *thd, TABLE_LIST *tables, COND *cond)
          (tmp_cs->state & MY_CS_HIDDEN) ||
         !(tmp_cs->state & MY_CS_PRIMARY))
       continue;
+    Character_set_collations_used used(thd);
+    CHARSET_INFO *def_cl= thd->variables.character_set_collations.
+                            get_collation_for_charset(&used, tmp_cs);
     for (cl= all_charsets;
          cl < all_charsets + array_elements(all_charsets)  ;
          cl ++)
@@ -6381,7 +6387,7 @@ int fill_schema_collation(THD *thd, TABLE_LIST *tables, COND *cond)
           table->field[2]->store((longlong) tmp_cl->number, TRUE);
           table->field[3]->set_notnull(); // IS_DEFAULT
           table->field[3]->store(
-            Show::Yes_or_empty::value(tmp_cl->default_flag()), scs);
+            Show::Yes_or_empty::value(def_cl == tmp_cl), scs);
         }
         table->field[4]->store(
           Show::Yes_or_empty::value(tmp_cl->compiled_flag()), scs);
@@ -6409,6 +6415,9 @@ int fill_schema_coll_charset_app(THD *thd, TABLE_LIST *tables, COND *cond)
     if (!tmp_cs || !(tmp_cs->state & MY_CS_AVAILABLE) ||
         !(tmp_cs->state & MY_CS_PRIMARY))
       continue;
+    Character_set_collations_used used(thd);
+    CHARSET_INFO *def_cl= thd->variables.character_set_collations.
+                            get_collation_for_charset(&used, tmp_cs);
     for (cl= all_charsets;
          cl < all_charsets + array_elements(all_charsets) ;
          cl ++)
@@ -6428,7 +6437,7 @@ int fill_schema_coll_charset_app(THD *thd, TABLE_LIST *tables, COND *cond)
       table->field[2]->store(full_collation_name, scs);
       table->field[3]->store(tmp_cl->number);
       table->field[4]->store(
-        Show::Yes_or_empty::value(tmp_cl->default_flag()), scs);
+        Show::Yes_or_empty::value(def_cl == tmp_cl), scs);
       if (schema_table_store_record(thd, table))
         return 1;
     }

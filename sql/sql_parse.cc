@@ -6049,6 +6049,27 @@ finish:
       }
       thd->reset_kill_query();
     }
+
+    /*
+      If a non-default collation (in @@character_set_collations)
+      was used during the statement, the mysqlbinlog output for
+      the current statement will contain a sequence like this:
+
+        SET character_set_collations='utf8mb3=utf8mb3_bin';
+        INSERT INTO t1 VALUES (_utf8mb3'test');
+        COMMIT;
+
+      The statment (INSERT in this example) is already in binlog at this point, and the
+      and the "SET character_set_collations" is written inside a
+      Q_CHARACTER_SET_COLLATIONS chunk in its log entry header.
+      The flag CHARACTER_SET_COLLATIONS_USED is not needed any more.
+
+      Let's suppress the flag to avoid a Q_CHARACTER_SET_COLLATIONS chunk
+      inside the COMMIT log entry header - it would be useless and would
+      only waste space in the binary log.
+    */
+    thd->used&= ~THD::CHARACTER_SET_COLLATIONS_USED;
+
     if (unlikely(thd->is_error()) ||
         (thd->variables.option_bits & OPTION_MASTER_SQL_ERROR))
     {
