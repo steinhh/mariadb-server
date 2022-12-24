@@ -58,17 +58,19 @@ enum ddl_log_action_code
   */
   DDL_LOG_UNKNOWN_ACTION= 0,
 
+#ifndef DDL_LOG_NO_OLD
   /* Delete a .frm file or a table in the partition engine */
-  DDL_LOG_FILE_DELETE_ACTION= 1,
+  DDL_LOG_DELETE_ACTION= 1,
 
   /* Rename a .frm fire a table in the partition engine */
-  DDL_LOG_FILE_RENAME_ACTION= 2,
+  DDL_LOG_RENAME_ACTION= 2,
 
   /*
     Rename an entity after removing the previous entry with the
     new name, that is replace this entry.
   */
-  DDL_LOG_FILE_REPLACE_ACTION= 3,
+  DDL_LOG_REPLACE_ACTION= 3,
+#endif
 
   /* Exchange two entities by renaming them a -> tmp, b -> a, tmp -> b */
   DDL_LOG_EXCHANGE_ACTION= 4,
@@ -88,6 +90,10 @@ enum ddl_log_action_code
   DDL_LOG_CREATE_TRIGGER_ACTION=15,
   DDL_LOG_ALTER_TABLE_ACTION=16,
   DDL_LOG_STORE_QUERY_ACTION=17,
+  DDL_LOG_FILE_DELETE_ACTION= 18,
+  DDL_LOG_FILE_RENAME_ACTION= 19,
+  DDL_LOG_FILE_REPLACE_ACTION= 20,
+
   DDL_LOG_LAST_ACTION                          /* End marker */
 };
 

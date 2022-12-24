@@ -88,12 +88,15 @@ uchar ddl_log_file_magic[]=
 
 const char *ddl_log_action_name[DDL_LOG_LAST_ACTION]=
 {
-  "Unknown", "file delete", "file rename",
-  "file replace", "partitioning exchange",
+  "Unknown",
+  /* NOTE: the below 3 cannot be removed even with DDL_LOG_NO_OLD */
+  "partitioning delete", "partitioning rename", "partitioning replace",
+  "partitioning exchange",
   "rename table", "rename view",
   "initialize drop table", "drop table",
   "drop view", "drop trigger", "drop db", "create table", "create view",
-  "delete tmp file", "create trigger", "alter table", "store query"
+  "delete tmp file", "create trigger", "alter table", "store query",
+  "file delete", "file rename", "file replace"
 };
 
 /* Number of phases per entry */
@@ -104,7 +107,7 @@ const uchar ddl_log_entry_phases[DDL_LOG_LAST_ACTION]=
   (uchar) DDL_DROP_PHASE_END, 1, 1,
   (uchar) DDL_DROP_DB_PHASE_END, (uchar) DDL_CREATE_TABLE_PHASE_END,
   (uchar) DDL_CREATE_VIEW_PHASE_END, 0, (uchar) DDL_CREATE_TRIGGER_PHASE_END,
-  DDL_ALTER_TABLE_PHASE_END, 1
+  DDL_ALTER_TABLE_PHASE_END, 1, 1, 1, 2,
 };
 
 
@@ -1339,6 +1342,12 @@ static int ddl_log_execute_action(THD *thd, MEM_ROOT *mem_root,
   handler_name=    ddl_log_entry->handler_name;
   thd->push_internal_handler(&no_such_table_handler);
 
+#ifndef DDL_LOG_NO_OLD
+  bool frm_action= FALSE;
+  if (!strcmp(ddl_log_entry->handler_name.str, reg_ext))
+    frm_action= TRUE;
+#endif
+
 #ifdef HAVE_PSI_FILE_INTERFACE
   if (ddl_log_entry->action_type <= DDL_LOG_FILE_REPLACE_ACTION &&
       ddl_log_entry->unique_id)
@@ -1361,6 +1370,70 @@ static int ddl_log_execute_action(THD *thd, MEM_ROOT *mem_root,
     fn_flags|= FN_TO_IS_TMP;
 
   switch (ddl_log_entry->action_type) {
+#ifndef DDL_LOG_NO_OLD
+  case DDL_LOG_REPLACE_ACTION:
+  case DDL_LOG_DELETE_ACTION:
+  {
+    if (ddl_log_entry->phase == 0)
+    {
+      if (frm_action)
+      {
+        strxmov(to_path, ddl_log_entry->name.str, reg_ext, NullS);
+        if (unlikely((error= mysql_file_delete(key_file_frm, to_path,
+                                               MYF(MY_WME |
+                                                   MY_IGNORE_ENOENT)))))
+          break;
+#ifdef WITH_PARTITION_STORAGE_ENGINE
+        strxmov(to_path, ddl_log_entry->name.str, PAR_EXT, NullS);
+        (void) mysql_file_delete(key_file_partition_ddl_log, to_path,
+                                 MYF(0));
+#endif
+      }
+      else
+      {
+        if (unlikely((error= hton->drop_table(hton, ddl_log_entry->name.str))))
+        {
+          if (!non_existing_table_error(error))
+            break;
+        }
+      }
+      if (increment_phase(entry_pos))
+        break;
+      error= 0;
+      if (ddl_log_entry->action_type == DDL_LOG_DELETE_ACTION)
+        break;
+    }
+  }
+  DBUG_ASSERT(ddl_log_entry->action_type == DDL_LOG_REPLACE_ACTION);
+  /*
+    Fall through and perform the rename action of the replace
+    action. We have already indicated the success of the delete
+    action in the log entry by stepping up the phase.
+  */
+  /* fall through */
+  case DDL_LOG_RENAME_ACTION:
+  {
+    error= TRUE;
+    if (frm_action)
+    {
+      strxmov(to_path, ddl_log_entry->name.str, reg_ext, NullS);
+      strxmov(from_path, ddl_log_entry->from_name.str, reg_ext, NullS);
+      (void) mysql_file_rename(key_file_frm, from_path, to_path, MYF(MY_WME));
+#ifdef WITH_PARTITION_STORAGE_ENGINE
+      strxmov(to_path, ddl_log_entry->name.str, PAR_EXT, NullS);
+      strxmov(from_path, ddl_log_entry->from_name.str, PAR_EXT, NullS);
+      (void) mysql_file_rename(key_file_partition_ddl_log, from_path, to_path,
+                               MYF(MY_WME));
+#endif
+    }
+    else
+      (void) file->ha_rename_table(ddl_log_entry->from_name.str,
+                                   ddl_log_entry->name.str);
+    if (increment_phase(entry_pos))
+      break;
+    break;
+  }
+#endif /* DDL_LOG_NO_OLD */
   case DDL_LOG_FILE_REPLACE_ACTION:
   case DDL_LOG_FILE_DELETE_ACTION:
   {
