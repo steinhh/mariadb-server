@@ -10,7 +10,6 @@
 --echo # Bug#53770: Server crash at handler.cc:2076 on LOAD DATA
 --echo # after timed out COALESCE PARTITION
 --echo # Extended crash recovery testing of fast_alter_partition_table.
-call mtr.add_suppression("Attempting backtrace. You can use the following information to find out");
 call mtr.add_suppression("Crashing at");
 call mtr.add_suppression("Failing at");
 flush tables;
