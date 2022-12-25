@@ -1866,7 +1866,7 @@ static int ddl_log_execute_action(THD *thd, MEM_ROOT *mem_root,
     path=   ddl_log_entry->tmp_name;
 
     /* Don't delete the table if we didn't create it */
-    if (ddl_log_entry->flags == 0)
+//     if (ddl_log_entry->flags == 0)
     {
       if (hton)
       {
@@ -3543,7 +3543,7 @@ bool ddl_log_create_table(DDL_LOG_STATE *ddl_state,
   ddl_log_entry.db=           *const_cast<LEX_CSTRING*>(db);
   ddl_log_entry.name=         *const_cast<LEX_CSTRING*>(table);
   ddl_log_entry.tmp_name=     *const_cast<LEX_CSTRING*>(path);
-  ddl_log_entry.flags=        only_frm ? DDL_LOG_FLAG_ONLY_FRM : 0;
+  ddl_log_entry.flags=        0;
   /* Needed for finalize_atomic_replace() which logs 2 events. */
   ddl_log_entry.next_entry=   ddl_state->list ? ddl_state->list->entry_pos : 0;
 

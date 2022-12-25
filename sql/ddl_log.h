@@ -172,7 +172,6 @@ enum enum_ddl_log_alter_table_phase {
 */
 #define DDL_LOG_FLAG_ALTER_RENAME         (1 << 0)
 #define DDL_LOG_FLAG_ALTER_ENGINE_CHANGED (1 << 1)
-#define DDL_LOG_FLAG_ONLY_FRM             (1 << 2)
 #define DDL_LOG_FLAG_UPDATE_STAT          (1 << 3)
 /*
   Set when using ALTER TABLE on a partitioned table and the table
