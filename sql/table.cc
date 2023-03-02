@@ -6889,6 +6889,9 @@ bool TABLE_LIST::prepare_security(THD *thd)
 #ifndef DBUG_OFF
 void TABLE_LIST::set_check_merged()
 {
+  if (is_view())
+    return;
+
   DBUG_ASSERT(derived);
   /*
     It is not simple to check all, but at least this should be checked:
@@ -7219,7 +7222,6 @@ void Field_iterator_table_ref::set_field_iterator()
   else if (table_ref->field_translation &&
            !table_ref->is_materialized_derived())
   {
-    DBUG_ASSERT(table_ref->is_merged_derived());
     field_it= &view_field_it;
     DBUG_PRINT("info", ("field_it for '%s' is Field_iterator_view",
                         table_ref->alias.str));
@@ -9810,20 +9812,21 @@ bool TABLE_LIST::init_derived(THD *thd, bool init_view)
     set_derived();
   }
 
-  if (!is_view() &&
+  if (is_view() ||
       !derived_table_optimization_done(this))
   {
     /* A subquery might be forced to be materialized due to a side-effect. */
     bool forced_no_merge_for_update_delete=
            belong_to_view ? belong_to_view->updating :
                            !unit->outer_select()->outer_select();
-    if (!is_materialized_derived() && first_select->is_mergeable() &&
+    if (!is_materialized_derived() && unit->can_be_merged() &&
         (unit->outer_select() && !unit->outer_select()->with_rownum) &&
         (!thd->lex->with_rownum ||
          (!first_select->group_list.elements &&
           !first_select->order_list.elements)) &&
-        optimizer_flag(thd, OPTIMIZER_SWITCH_DERIVED_MERGE) &&
-        !thd->lex->can_not_use_merged(forced_no_merge_for_update_delete) &&
+        (optimizer_flag(thd, OPTIMIZER_SWITCH_DERIVED_MERGE) || is_view()) &&
+        !(thd->lex->can_not_use_merged(forced_no_merge_for_update_delete) &&
+          !is_view()) &&
         !is_recursive_with_table())
       set_merged_derived();
     else

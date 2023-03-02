@@ -2972,8 +2972,7 @@ struct TABLE_LIST
     DBUG_PRINT("enter", ("Alias: '%s'  Unit: %p",
                         (alias.str ? alias.str : "<NULL>"),
                          get_unit()));
-    derived_type= static_cast<uint8>((derived_type & DTYPE_MASK) |
-                                     DTYPE_TABLE | DTYPE_MERGE);
+    derived_type= static_cast<uint8>((derived_type & DTYPE_MASK) | DTYPE_MERGE);
     set_check_merged();
     DBUG_VOID_RETURN;
   }
@@ -2987,10 +2986,8 @@ struct TABLE_LIST
     DBUG_PRINT("enter", ("Alias: '%s'  Unit: %p",
                         (alias.str ? alias.str : "<NULL>"),
                          get_unit()));
-    derived= get_unit();
-    derived_type= static_cast<uint8>((derived_type &
-                                      (derived ? DTYPE_MASK : DTYPE_VIEW)) |
-                                     DTYPE_TABLE | DTYPE_MATERIALIZE);
+    derived_type= static_cast<uint8>((derived_type & DTYPE_MASK) |
+                                     DTYPE_MATERIALIZE);
     set_check_materialized();
     DBUG_VOID_RETURN;
   }
