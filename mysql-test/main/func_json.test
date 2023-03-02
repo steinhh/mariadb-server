@@ -3357,4 +3357,11 @@ SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.jso
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 
 
+--echo #
+--echo # MDEV-30677: Incorrect result for "SELECT JSON_SCHEMA_VALID('{}', NULL)"
+--echo #
+SELECT JSON_SCHEMA_VALID('{}', NULL);
+SELECT JSON_SCHEMA_VALID(NULL, '{}');
+SELECT JSON_SCHEMA_VALID(NULL, NULL);
+
 --echo # End of 11.1 test
