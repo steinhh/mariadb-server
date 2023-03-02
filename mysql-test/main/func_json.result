@@ -4462,4 +4462,19 @@ ERROR HY000: $anchor keyword is not supported
 SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.json#"}';
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 ERROR HY000: $defs keyword is not supported
+#
+# MDEV-30703: JSON_SCHEMA_VALID : Enum array must have at least one value
+#
+SET @schema = '{
+                 "type":"array",
+                  "enum": []
+                }';
+SELECT JSON_SCHEMA_VALID(@schema, '2');
+ERROR HY000: Invalid value for keyword enum
+SET @schema = '{
+                 "type":"number",
+                  "enum": [2, 2]
+                }';
+SELECT JSON_SCHEMA_VALID(@schema, '2');
+ERROR HY000: Invalid value for keyword enum
 # End of 11.1 test
