@@ -4462,4 +4462,19 @@ ERROR HY000: $anchor keyword is not supported
 SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.json#"}';
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 ERROR HY000: $defs keyword is not supported
+#
+# MDEV-30705: JSON_SCHEMA_VALID: schema with multipleOf for big value always return 1
+#
+SET @schema = '{
+                  "multipleOf": 2
+                }';
+SELECT JSON_SCHEMA_VALID(@schema, '9007900000000001');
+JSON_SCHEMA_VALID(@schema, '9007900000000001')
+0
+SELECT JSON_SCHEMA_VALID(@schema, '9007900000000060');
+JSON_SCHEMA_VALID(@schema, '9007900000000060')
+1
+SELECT JSON_SCHEMA_VALID(@schema, '9007900000000061');
+JSON_SCHEMA_VALID(@schema, '9007900000000061')
+0
 # End of 11.1 test

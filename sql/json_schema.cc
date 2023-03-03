@@ -756,13 +756,13 @@ bool Json_schema_multiple_of::validate(const json_engine_t *je,
 
   if (je->value_type != JSON_VALUE_NUMBER)
     return false;
+  if (je->num_flags & JSON_NUM_FRAC_PART)
+    return true;
 
-  double val= je->s.cs->strntod((char *) je->value,
-                                  je->value_len, &end, &err);
-  double temp= val / this->value;
-  bool res= (temp - (long long int)temp) == 0;
+  longlong val= je->s.cs->strntoll((char *) je->value,
+                                  je->value_len, 10, &end, &err);
 
-  return !res;
+  return val % multiple_of;
 }
 
 bool Json_schema_multiple_of::handle_keyword(THD *thd, json_engine_t *je,
@@ -774,17 +774,17 @@ bool Json_schema_multiple_of::handle_keyword(THD *thd, json_engine_t *je,
   int err= 0;
   char *end;
 
-  if (je->value_type != JSON_VALUE_NUMBER)
+  if (je->value_type != JSON_VALUE_NUMBER || (je->num_flags & JSON_NUM_FRAC_PART))
   {
     my_error(ER_JSON_INVALID_VALUE_FOR_KEYWORD, MYF(0), "multipleOf");
     return true;
   }
 
-  double val= je->s.cs->strntod((char *) je->value,
-                                 je->value_len, &end, &err);
+  longlong val= je->s.cs->strntoll((char *) je->value,
+                                 je->value_len, 10, &end, &err);
   if (val < 0)
     my_error(ER_JSON_INVALID_VALUE_FOR_KEYWORD, MYF(0), "multipleOf");
-  value= val;
+  multiple_of= val;
 
   return false;
 }
