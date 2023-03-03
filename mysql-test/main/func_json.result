@@ -3344,7 +3344,7 @@ SET @invalid_schema= '{"type":"object"
                            }';
 SELECT JSON_SCHEMA_VALID(@invalid_schema, '{"number1":3, "obj2":{"key1":3}}');
 JSON_SCHEMA_VALID(@invalid_schema, '{"number1":3, "obj2":{"key1":3}}')
-1
+0
 Warnings:
 Warning	4038	Syntax error in JSON text in argument 2 to function 'json_schema_valid' at position 45
 SET @invalid_json= '{"type":"array",
@@ -3354,6 +3354,8 @@ SET @invalid_json= '{"type":"array",
 SELECT JSON_SCHEMA_VALID(@schema_array, '[1, 2, 3, 4');
 JSON_SCHEMA_VALID(@schema_array, '[1, 2, 3, 4')
 0
+Warnings:
+Warning	4037	Unexpected end of JSON text in argument 2 to function 'json_schema_valid'
 SET @schema_string= '{
                        "type": "string",
                        "maxLength":-2
@@ -3482,7 +3484,7 @@ ERROR 23000: CONSTRAINT `obj_table.val_obj` failed for `test`.`obj_table`
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd"}');
 ERROR 23000: CONSTRAINT `obj_table.val_obj` failed for `test`.`obj_table`
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"]}');
-ERROR 23000: CONSTRAINT `obj_table.val_obj` failed for `test`.`obj_table`
+ERROR HY000: Unexpected end of JSON text in argument 2 to function 'json_schema_valid'
 SELECT * FROM obj_table;
 val_obj
 {"number1":4, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"], "key3":4}}
@@ -4462,4 +4464,23 @@ ERROR HY000: $anchor keyword is not supported
 SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.json#"}';
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 ERROR HY000: $defs keyword is not supported
+#
+# MDEV-30689: JSON_SCHEMA_VALID for type=array return 1 for any string that starts with '['
+#
+SET @schema_array= '{"type":"array"}';
+SELECT JSON_SCHEMA_VALID(@schema_array, '[');
+JSON_SCHEMA_VALID(@schema_array, '[')
+0
+Warnings:
+Warning	4037	Unexpected end of JSON text in argument 2 to function 'json_schema_valid'
+SELECT JSON_SCHEMA_VALID(repeat('[', 100000), json_object());
+JSON_SCHEMA_VALID(repeat('[', 100000), json_object())
+0
+Warnings:
+Warning	4040	Limit of 32 on JSON nested structures depth is reached in argument 2 to function 'json_schema_valid' at position 32
+SELECT JSON_SCHEMA_VALID(json_object(), repeat('[', 10000000));
+JSON_SCHEMA_VALID(json_object(), repeat('[', 10000000))
+0
+Warnings:
+Warning	4040	Limit of 32 on JSON nested structures depth is reached in argument 2 to function 'json_schema_valid' at position 32
 # End of 11.1 test

@@ -2499,7 +2499,7 @@ INSERT INTO obj_table VALUES('{"number1":4, "string1":"abcd", "object1":{"key1":
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"], "key3":4}}');
 --error ER_CONSTRAINT_FAILED
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd"}');
---error ER_CONSTRAINT_FAILED
+--error ER_JSON_EOS
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"]}');
 SELECT * FROM obj_table;
 
@@ -3356,5 +3356,17 @@ SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.jso
 --error ER_JSON_SCHEMA_KEYWORD_UNSUPPORTED
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 
+
+--echo #
+--echo # MDEV-30689: JSON_SCHEMA_VALID for type=array return 1 for any string that starts with '['
+--echo #
+
+
+SET @schema_array= '{"type":"array"}';
+SELECT JSON_SCHEMA_VALID(@schema_array, '[');
+
+SELECT JSON_SCHEMA_VALID(repeat('[', 100000), json_object());
+
+SELECT JSON_SCHEMA_VALID(json_object(), repeat('[', 10000000));
 
 --echo # End of 11.1 test

@@ -4725,7 +4725,7 @@ bool Item_func_json_overlaps::fix_length_and_dec(THD *thd)
 
 longlong Item_func_json_schema_valid::val_int()
 {
-  json_engine_t ve;
+  json_engine_t ve, temp_ve;
   int is_valid= 1;
 
   if (!schema_parsed)
@@ -4741,6 +4741,20 @@ longlong Item_func_json_schema_valid::val_int()
 
   json_scan_start(&ve, val->charset(), (const uchar *) val->ptr(),
                   (const uchar *) val->end());
+
+  /*
+    check whether the json doc is valid, even before starting to
+    validate is against the schema. If the json doc has any error
+    example syntax error then no need to try validating it against schema
+    in the first place.
+  */
+  temp_ve= ve;
+  while (json_scan_next(&temp_ve)==0) {}
+  if (unlikely(temp_ve.s.error))
+  {
+    ve= temp_ve;
+    goto end;
+  }
 
   if (json_read_value(&ve))
     goto end;
@@ -4763,7 +4777,7 @@ end:
   if (unlikely(ve.s.error))
   {
     is_valid= 0;
-    report_json_error(val, &ve, 2);
+    report_json_error(val, &ve, 1);
   }
 
   return is_valid;
@@ -4801,7 +4815,10 @@ bool Item_func_json_schema_valid::fix_length_and_dec(THD *thd)
     res= true;
 
   if (je.s.error)
+  {
+    schema_parsed= false;
     report_json_error(js, &je, 1);
+  }
 
   return res || Item_bool_func::fix_length_and_dec(thd);
 }
