@@ -4742,6 +4742,13 @@ longlong Item_func_json_schema_valid::val_int()
   json_scan_start(&ve, val->charset(), (const uchar *) val->ptr(),
                   (const uchar *) val->end());
 
+  while (json_scan_next(&ve) == 0 ) {}
+  if (ve.s.error)
+    goto end;
+
+  json_scan_start(&ve, val->charset(), (const uchar *) val->ptr(),
+                  (const uchar *) val->end());
+  
   if (json_read_value(&ve))
     goto end;
 

@@ -2499,7 +2499,7 @@ INSERT INTO obj_table VALUES('{"number1":4, "string1":"abcd", "object1":{"key1":
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"], "key3":4}}');
 --error ER_CONSTRAINT_FAILED
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd"}');
---error ER_CONSTRAINT_FAILED
+--error ER_JSON_EOS
 INSERT INTO obj_table VALUES('{"number1":3, "string1":"abcd", "object1":{"key1":"val1", "key2":[1,2,3, "string1"]}');
 SELECT * FROM obj_table;
 
@@ -3357,4 +3357,15 @@ SET @schema_reference= '{"$defs": "http://example.com/custom-email-validator.jso
 SELECT JSON_SCHEMA_VALID(@schema_reference, '{}');
 
 
---echo # End of 11.1 test
+--echo #
+--echo # MDEV-30287: JSON_SCHEMA_VALID returns incorrect result for type=number
+--echo #
+
+SET @schema= '{"type":"number"}';
+ 
+SELECT JSON_SCHEMA_VALID(@schema, '3.14');
+SELECT JSON_SCHEMA_VALID(@schema, '0zzzz');
+SELECT JSON_SCHEMA_VALID(@schema, '-#');
+
+
+--echo # End of 11.1
