@@ -1120,6 +1120,7 @@ explain extended select * from t1 use index () where b=2;
 
 --echo # Now, the equality is used for ref access, while the range condition
 --echo # gives selectivity data
+analyze table t1 persistent for all;
 explain extended select * from t1 where a in (17,51,5) and b=2;
 drop table t1;
 
