@@ -434,14 +434,13 @@ bool dbug_user_var_equals_str(THD *thd, const char *name, const char* value)
   Intialize POSITION structure.
 */
 
-POSITION::POSITION()
+POSITION::POSITION() : use_join_buffer(0), firstmatch_with_join_buf(0)
 {
   table= 0;
   records_read= cond_selectivity= read_time= records_out= records_init= 0.0;
   prefix_record_count= 0.0;
   key= 0;
   forced_index= 0;
-  use_join_buffer= 0;
   sj_strategy= SJ_OPT_NONE;
   n_sj_tables= 0;
   spl_plan= 0;
