@@ -1,4 +1,7 @@
-drop table if exists t1;
+#
+# test of DELAYED insert and timestamps
+# (Can't be tested with purify :( )
+#
 create table t1 (a char(10), tmsp timestamp);
 insert into t1 set a = 1;
 insert delayed into t1 set a = 2;
@@ -17,6 +20,10 @@ a	tmsp
 6	1971-10-06 01:02:03
 8	1971-10-06 01:02:03
 drop table t1;
+#
+# Test bug when inserting NULL into an auto_increment field with
+# INSERT DELAYED
+#
 create table t1 (a int not null auto_increment primary key, b char(10));
 insert delayed into t1 values (1,"b");
 insert delayed into t1 values (null,"c");
@@ -34,6 +41,12 @@ a	b
 3	d
 4	e
 drop table t1;
+#
+# End of 4.1 tests
+#
+#
+# Bug #12226: Crash when a delayed insert fails due to a duplicate key
+#
 create table t1 (a int not null primary key);
 insert into t1 values (1);
 insert delayed into t1 values (1);
@@ -41,6 +54,9 @@ select * from t1;
 a
 1
 drop table t1;
+#
+# Bug #20195: INSERT DELAYED with auto_increment is assigned wrong values
+#
 CREATE TABLE t1 ( a int(10) NOT NULL auto_increment, PRIMARY KEY (a));
 insert delayed into t1 values(null);
 insert into t1 values(null);
@@ -72,18 +88,10 @@ a
 12
 13
 DROP TABLE t1;
-SET @bug20627_old_auto_increment_offset=
-@@auto_increment_offset;
-SET @bug20627_old_auto_increment_increment=
-@@auto_increment_increment;
-SET @bug20627_old_session_auto_increment_offset=
-@@session.auto_increment_offset;
-SET @bug20627_old_session_auto_increment_increment=
-@@session.auto_increment_increment;
-SET @@auto_increment_offset= 2;
-SET @@auto_increment_increment= 3;
-SET @@session.auto_increment_offset= 4;
-SET @@session.auto_increment_increment= 5;
+#
+# Bug#20627 - INSERT DELAYED does not honour auto_increment_* variables
+#
+SET @@auto_increment_offset= 4, @@auto_increment_increment= 5;
 CREATE TABLE t1 (
 c1 INT NOT NULL AUTO_INCREMENT,
 PRIMARY KEY (c1)
@@ -107,26 +115,11 @@ c1
 9
 14
 DROP TABLE t1;
-SET             @@auto_increment_offset=
-@bug20627_old_auto_increment_offset;
-SET             @@auto_increment_increment=
-@bug20627_old_auto_increment_increment;
-SET             @@session.auto_increment_offset=
-@bug20627_old_session_auto_increment_offset;
-SET             @@session.auto_increment_increment=
-@bug20627_old_session_auto_increment_increment;
-SET @bug20830_old_auto_increment_offset=
-@@auto_increment_offset;
-SET @bug20830_old_auto_increment_increment=
-@@auto_increment_increment;
-SET @bug20830_old_session_auto_increment_offset=
-@@session.auto_increment_offset;
-SET @bug20830_old_session_auto_increment_increment=
-@@session.auto_increment_increment;
-SET @@auto_increment_offset= 2;
-SET @@auto_increment_increment= 3;
-SET @@session.auto_increment_offset= 4;
-SET @@session.auto_increment_increment= 5;
+SET @@auto_increment_offset=default, @@auto_increment_increment=default;
+#
+# Bug#20830 - INSERT DELAYED does not honour SET INSERT_ID
+#
+SET @@auto_increment_offset= 4, @@auto_increment_increment= 5;
 CREATE TABLE t1 (
 c1 INT(11) NOT NULL AUTO_INCREMENT,
 c2 INT(11) DEFAULT NULL,
@@ -235,14 +228,10 @@ SELECT SUM(c1) FROM t1;
 SUM(c1)
 2569
 DROP TABLE t1;
-SET             @@auto_increment_offset=
-@bug20830_old_auto_increment_offset;
-SET             @@auto_increment_increment=
-@bug20830_old_auto_increment_increment;
-SET             @@session.auto_increment_offset=
-@bug20830_old_session_auto_increment_offset;
-SET             @@session.auto_increment_increment=
-@bug20830_old_session_auto_increment_increment;
+SET @@auto_increment_offset=default, @@auto_increment_increment=default;
+#
+# BUG#26238 - inserted delayed always inserts 0 for BIT columns
+#
 CREATE TABLE t1(a BIT);
 INSERT DELAYED INTO t1 VALUES(1);
 FLUSH TABLE t1;
@@ -250,6 +239,9 @@ SELECT HEX(a) FROM t1;
 HEX(a)
 1
 DROP TABLE t1;
+#
+# Bug #32676: insert delayed crash with wrong column and function specified
+#
 CREATE TABLE t1 (a INT);
 INSERT DELAYED INTO t1 SET a= b();
 ERROR 42000: FUNCTION test.b does not exist
@@ -258,8 +250,12 @@ ERROR 42S22: Unknown column 'b' in 'field list'
 INSERT DELAYED INTO t1 SET b= b();
 ERROR 42000: FUNCTION test.b does not exist
 DROP TABLE t1;
-End of 5.0 tests
-DROP TABLE IF EXISTS t1,t2;
+#
+# End of 5.0 tests
+#
+#
+# Bug#27358 INSERT DELAYED does not honour SQL_MODE of the client
+#
 SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 CREATE TABLE `t1` (
 `id` int(11) PRIMARY KEY auto_increment,
@@ -288,12 +284,15 @@ ERROR 22007: Incorrect date value: '0000-00-00' for column `test`.`t2`.`f1` at r
 INSERT DELAYED INTO t2 VALUES (0,'2007-00-00');
 ERROR 22007: Incorrect date value: '2007-00-00' for column `test`.`t2`.`f1` at row 1
 DROP TABLE t1,t2;
+#
+# Bug#40536: SELECT is blocked by INSERT DELAYED waiting on upgrading lock,
+#            even with low_priority_updates
+#
 set @old_delayed_updates = @@global.low_priority_updates;
 set global low_priority_updates = 1;
 select @@global.low_priority_updates;
 @@global.low_priority_updates
 1
-drop table if exists t1;
 create table t1 (a int, b int);
 insert into t1 values (1,1);
 lock table t1 read;
@@ -322,7 +321,6 @@ set global low_priority_updates = @old_delayed_updates;
 #
 # Bug #47682 strange behaviour of INSERT DELAYED
 #
-DROP TABLE IF EXISTS t1, t2;
 CREATE TABLE t1 (f1 integer);
 CREATE TABLE t2 (f1 integer);
 FLUSH TABLES WITH READ LOCK;
@@ -331,12 +329,12 @@ INSERT DELAYED INTO t2 VALUES (1);
 Got one of the listed errors
 UNLOCK TABLES;
 DROP TABLE t1, t2;
-End of 5.1 tests
+#
+# End of 5.1 tests
+#
 #
 # Bug #47274 assert in open_table on CREATE TABLE <already existing>
 #
-DROP TABLE IF EXISTS t1;
-DROP TABLE IF EXISTS t2;
 CREATE TABLE t1 ( f1 INTEGER AUTO_INCREMENT, PRIMARY KEY (f1));
 # The following CREATE TABLEs before gave an assert.
 INSERT DELAYED t1 VALUES (4);
@@ -359,7 +357,6 @@ DROP TABLE t1;
 #
 # This test is not supposed to work under --ps-protocol since
 # INSERT DELAYED doesn't work under LOCK TABLES with this protocol.
-DROP TABLE IF EXISTS t1, t2;
 CREATE TABLE t1 (a INT);
 CREATE TABLE t2 (a INT);
 CREATE TABLE t3 (a INT);
@@ -450,7 +447,6 @@ DROP TABLE t1, t2, t3;
 #
 connect  con1,localhost,root,,;
 connection default;
-drop table if exists t1, t2, tm;
 create table t1(a int);
 create table t2(a int);
 create table tm(a int) engine=merge union=(t1, t2);
@@ -519,3 +515,6 @@ CREATE TABLE t1 (c0 INT,UNIQUE (c0) USING HASH) ENGINE=MYISAM;
 INSERT DELAYED INTO t1 VALUES (0);
 INSERT DELAYED INTO t1 VALUES (0);
 DROP TABLE t1;
+#
+# End of 10.4 tests
+#

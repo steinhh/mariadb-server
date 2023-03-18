@@ -4,26 +4,12 @@
 --source include/not_valgrind.inc
 # Avoid CrashReporter popup on Mac
 --source include/not_crashrep.inc
-# Binary must be compiled with debug for crash to occur
---source include/have_debug_sync.inc
 
-#
-# test of DELAYED insert and timestamps
-# (Can't be tested with purify :( )
-#
+--echo #
+--echo # test of DELAYED insert and timestamps
+--echo # (Can't be tested with purify :( )
+--echo #
 
-# limit the test to engines which support INSERT DELAYED
-disable_query_log;
---require include/true.require
-select @@global.default_storage_engine in
-("memory","myisam","archive","blackhole") and
-@@session.default_storage_engine in
-("memory","myisam","archive","blackhole") as `TRUE`;
-enable_query_log;
-
---disable_warnings
-drop table if exists t1;
---enable_warnings
 create table t1 (a char(10), tmsp timestamp);
 insert into t1 set a = 1;
 insert delayed into t1 set a = 2;
@@ -39,10 +25,10 @@ select * from t1 where tmsp=0;
 select * from t1 where tmsp=19711006010203;
 drop table t1;
 
-#
-# Test bug when inserting NULL into an auto_increment field with
-# INSERT DELAYED
-#
+--echo #
+--echo # Test bug when inserting NULL into an auto_increment field with
+--echo # INSERT DELAYED
+--echo #
 
 create table t1 (a int not null auto_increment primary key, b char(10));
 insert delayed into t1 values (1,"b");
@@ -56,20 +42,22 @@ show status like 'not_flushed_delayed_rows';
 select * from t1;
 drop table t1;
 
-# End of 4.1 tests
+--echo #
+--echo # End of 4.1 tests
+--echo #
 
-#
-# Bug #12226: Crash when a delayed insert fails due to a duplicate key
-#
+--echo #
+--echo # Bug #12226: Crash when a delayed insert fails due to a duplicate key
+--echo #
 create table t1 (a int not null primary key);
 insert into t1 values (1);
 insert delayed into t1 values (1);
 select * from t1;
 drop table t1;
 
-#
-# Bug #20195: INSERT DELAYED with auto_increment is assigned wrong values
-#
+--echo #
+--echo # Bug #20195: INSERT DELAYED with auto_increment is assigned wrong values
+--echo #
 CREATE TABLE t1 ( a int(10) NOT NULL auto_increment, PRIMARY KEY (a));
 
 # Make one delayed insert to start the separate thread
@@ -115,21 +103,10 @@ select * from t1 order by a;
 
 DROP TABLE t1;
 
-#
-# Bug#20627 - INSERT DELAYED does not honour auto_increment_* variables
-#
-SET @bug20627_old_auto_increment_offset=
-                @@auto_increment_offset;
-SET @bug20627_old_auto_increment_increment=
-                @@auto_increment_increment;
-SET @bug20627_old_session_auto_increment_offset=
-                @@session.auto_increment_offset;
-SET @bug20627_old_session_auto_increment_increment=
-                @@session.auto_increment_increment;
-SET @@auto_increment_offset= 2;
-SET @@auto_increment_increment= 3;
-SET @@session.auto_increment_offset= 4;
-SET @@session.auto_increment_increment= 5;
+--echo #
+--echo # Bug#20627 - INSERT DELAYED does not honour auto_increment_* variables
+--echo #
+SET @@auto_increment_offset= 4, @@auto_increment_increment= 5;
 #
 # Normal insert as reference.
 CREATE TABLE t1 (
@@ -153,31 +130,12 @@ FLUSH TABLE t1;
 SELECT * FROM t1;
 DROP TABLE t1;
 #
-# Cleanup
-SET             @@auto_increment_offset=
-    @bug20627_old_auto_increment_offset;
-SET             @@auto_increment_increment=
-    @bug20627_old_auto_increment_increment;
-SET             @@session.auto_increment_offset=
-    @bug20627_old_session_auto_increment_offset;
-SET             @@session.auto_increment_increment=
-    @bug20627_old_session_auto_increment_increment;
+SET @@auto_increment_offset=default, @@auto_increment_increment=default;
 
-#
-# Bug#20830 - INSERT DELAYED does not honour SET INSERT_ID
-#
-SET @bug20830_old_auto_increment_offset=
-                @@auto_increment_offset;
-SET @bug20830_old_auto_increment_increment=
-                @@auto_increment_increment;
-SET @bug20830_old_session_auto_increment_offset=
-                @@session.auto_increment_offset;
-SET @bug20830_old_session_auto_increment_increment=
-                @@session.auto_increment_increment;
-SET @@auto_increment_offset= 2;
-SET @@auto_increment_increment= 3;
-SET @@session.auto_increment_offset= 4;
-SET @@session.auto_increment_increment= 5;
+--echo #
+--echo # Bug#20830 - INSERT DELAYED does not honour SET INSERT_ID
+--echo #
+SET @@auto_increment_offset= 4, @@auto_increment_increment= 5;
 #
 # Normal insert as reference.
 CREATE TABLE t1 (
@@ -241,27 +199,20 @@ SELECT SUM(c1) FROM t1;
 DROP TABLE t1;
 #
 # Cleanup
-SET             @@auto_increment_offset=
-    @bug20830_old_auto_increment_offset;
-SET             @@auto_increment_increment=
-    @bug20830_old_auto_increment_increment;
-SET             @@session.auto_increment_offset=
-    @bug20830_old_session_auto_increment_offset;
-SET             @@session.auto_increment_increment=
-    @bug20830_old_session_auto_increment_increment;
+SET @@auto_increment_offset=default, @@auto_increment_increment=default;
 
-#
-# BUG#26238 - inserted delayed always inserts 0 for BIT columns
-#
+--echo #
+--echo # BUG#26238 - inserted delayed always inserts 0 for BIT columns
+--echo #
 CREATE TABLE t1(a BIT);
 INSERT DELAYED INTO t1 VALUES(1);
 FLUSH TABLE t1;
 SELECT HEX(a) FROM t1;
 DROP TABLE t1;
 
-#
-# Bug #32676: insert delayed crash with wrong column and function specified
-#
+--echo #
+--echo # Bug #32676: insert delayed crash with wrong column and function specified
+--echo #
 CREATE TABLE t1 (a INT);
 --error ER_SP_DOES_NOT_EXIST
 INSERT DELAYED INTO t1 SET a= b();
@@ -271,14 +222,13 @@ INSERT DELAYED INTO t1 SET b= 1;
 INSERT DELAYED INTO t1 SET b= b();
 DROP TABLE t1;
 
---echo End of 5.0 tests
+--echo #
+--echo # End of 5.0 tests
+--echo #
 
-#
-# Bug#27358 INSERT DELAYED does not honour SQL_MODE of the client
-#
---disable_warnings
-DROP TABLE IF EXISTS t1,t2;
---enable_warnings
+--echo #
+--echo # Bug#27358 INSERT DELAYED does not honour SQL_MODE of the client
+--echo #
 SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 CREATE TABLE `t1` (
   `id` int(11) PRIMARY KEY auto_increment,
@@ -305,19 +255,16 @@ INSERT DELAYED INTO t2 VALUES (0,'0000-00-00');
 INSERT DELAYED INTO t2 VALUES (0,'2007-00-00');
 DROP TABLE t1,t2;
 
-#
-# Bug#40536: SELECT is blocked by INSERT DELAYED waiting on upgrading lock,
-#            even with low_priority_updates
-#
+--echo #
+--echo # Bug#40536: SELECT is blocked by INSERT DELAYED waiting on upgrading lock,
+--echo #            even with low_priority_updates
+--echo #
 --disable_service_connection
 
 set @old_delayed_updates = @@global.low_priority_updates;
 set global low_priority_updates = 1;
 select @@global.low_priority_updates;
 
---disable_warnings
-drop table if exists t1;
---enable_warnings
 create table t1 (a int, b int);
 insert into t1 values (1,1);
 lock table t1 read;
@@ -351,10 +298,6 @@ set global low_priority_updates = @old_delayed_updates;
 --echo # Bug #47682 strange behaviour of INSERT DELAYED
 --echo #
 
---disable_warnings
-DROP TABLE IF EXISTS t1, t2;
---enable_warnings
-
 CREATE TABLE t1 (f1 integer);
 CREATE TABLE t2 (f1 integer);
 
@@ -370,18 +313,13 @@ UNLOCK TABLES;
 DROP TABLE t1, t2;
 
 
---echo End of 5.1 tests
-
-
+--echo #
+--echo # End of 5.1 tests
+--echo #
 
 --echo #
 --echo # Bug #47274 assert in open_table on CREATE TABLE <already existing>
 --echo #
-
---disable_warnings
-DROP TABLE IF EXISTS t1;
-DROP TABLE IF EXISTS t2;
---enable_warnings
 
 CREATE TABLE t1 ( f1 INTEGER AUTO_INCREMENT, PRIMARY KEY (f1));
 
@@ -415,10 +353,6 @@ DROP TABLE t1;
 --echo # This test is not supposed to work under --ps-protocol since
 --echo # INSERT DELAYED doesn't work under LOCK TABLES with this protocol.
 --disable_ps_protocol
-
---disable_warnings
-DROP TABLE IF EXISTS t1, t2;
---enable_warnings
 
 CREATE TABLE t1 (a INT);
 CREATE TABLE t2 (a INT);
@@ -570,9 +504,6 @@ DROP TABLE t1, t2, t3;
 --echo #
 connect (con1,localhost,root,,);
 connection default;
---disable_warnings
-drop table if exists t1, t2, tm;
---enable_warnings
 create table t1(a int);
 create table t2(a int);
 create table tm(a int) engine=merge union=(t1, t2);
@@ -655,4 +586,8 @@ CREATE TABLE t1 (c0 INT,UNIQUE (c0) USING HASH) ENGINE=MYISAM;
 INSERT DELAYED INTO t1 VALUES (0);
 INSERT DELAYED INTO t1 VALUES (0);
 DROP TABLE t1;
+
+--echo #
+--echo # End of 10.4 tests
+--echo #
 
