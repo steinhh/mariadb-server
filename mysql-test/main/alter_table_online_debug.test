@@ -61,7 +61,9 @@ set debug_sync= 'now SIGNAL end';
 commit;
 --connection default
 select variable_value into @otd from information_schema.session_status where variable_name='Opened_table_definitions';
+--disable_view_protocol
 select * from t1;
+--enable_view_protocol
 select variable_value-@otd from information_schema.session_status where variable_name='Opened_table_definitions';
 
 --echo # long transaction and add column

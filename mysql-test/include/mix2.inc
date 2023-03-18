@@ -157,7 +157,6 @@ drop table t1;
 
 
 # Test of reading on secondary key with may be null
---disable_view_protocol
 eval create table t1 (a int,b varchar(20),key(a)) engine=$engine_type;
 insert into t1 values (1,""), (2,"testing");
 select * from t1 where a = 1;
@@ -289,7 +288,6 @@ drop table t1;
 rename table t2 to t1;
 drop table t1;
 set autocommit=1;
---enable_view_protocol
 #
 # The following simple tests failed at some point
 #
@@ -569,6 +567,7 @@ drop table t1;
 # Test lock tables
 #
 
+--disable_view_protocol
 eval create table t1 (id int NOT NULL,id2 int NOT NULL,id3 int NOT NULL,dummy1 char(30),primary key (id,id2),index index_id3 (id3)) engine=$engine_type;
 insert into t1 values (0,0,0,'ABCDEFGHIJ'),(2,2,2,'BCDEFGHIJK'),(1,1,1,'CDEFGHIJKL');
 LOCK TABLES t1 WRITE;
@@ -591,6 +590,7 @@ commit;
 select id,id3 from t1;
 UNLOCK TABLES;
 DROP TABLE t1;
+--enable_view_protocol
 
 #
 # Test prefix key

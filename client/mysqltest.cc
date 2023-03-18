@@ -9190,6 +9190,8 @@ void run_query(struct st_connection *cn, struct st_command *command, int flags)
   dynstr_set(&ds_res, 0);
 
   if (view_protocol_enabled && mysql &&
+      !(mysql->server_status & SERVER_STATUS_IN_TRANS) &&
+      (mysql->server_status & SERVER_STATUS_AUTOCOMMIT) &&
       complete_query &&
       match_re(&view_re, query))
   {

@@ -55,7 +55,6 @@ GRANT ALL ON test.* TO mysqltest@localhost;
 --echo **
 --echo ** two UPDATE's running and both changing distinct result sets
 --echo **
---disable_view_protocol
   connect (thread1, localhost, mysqltest,,);
   connection thread1;
   --echo ** Set up table
@@ -228,7 +227,6 @@ drop table t1;
 
 connection default;
 drop table t1;
---enable_view_protocol
 
 --echo
 --echo **
@@ -306,9 +304,7 @@ drop table t1;
       --echo ** Begin a new transaction on thread 2
       begin;
       --echo ** Select a range for update.
-      --disable_view_protocol
       select * from t1 where tipo=2 FOR UPDATE;
-      --enable_view_protocol
   connection thread1;
   --echo ** Begin a new transaction on thread 1 
   begin;
@@ -347,7 +343,6 @@ drop table t1;
 --echo **
 --echo ** one UPDATE not changing result set and SELECT ... FOR UPDATE
 --echo **
---disable_view_protocol
   #connect (thread1, localhost, mysqltest,,);
   connection thread1;
   --echo ** Set up table
@@ -445,10 +440,8 @@ drop table t1;
   begin;
   --echo ** Selecting a range for update by table scan will be blocked
   --echo ** because of on-going transaction on thread 2.
-  --disable_view_protocol
   --error ER_LOCK_WAIT_TIMEOUT
     select * from t1 where tipo=1 FOR UPDATE;
-  --enable_view_protocol
   
       connection thread2;
       --echo ** Table will be unchanged and the select command will not be
@@ -471,7 +464,6 @@ drop table t1;
 
 connection default;
 drop table t1;
---enable_view_protocol
 
 --echo
 --echo **
@@ -557,7 +549,6 @@ drop table t1;
 # succeding update in the following thread. Also the used status variables '%lock%' and
 # 'innodb_deleted_rows' and infos in processlist where not sucessful.
       sleep 1;
- --disable_view_protocol
   connection thread1;
   begin;
   --echo ** Update on t1 will cause a table scan which will be blocked because
@@ -580,7 +571,6 @@ drop table t1;
       reap;
       select * from t1;
       send commit;
---enable_view_protocol
   connection thread1;
   commit;
 
