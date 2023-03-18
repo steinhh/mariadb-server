@@ -240,6 +240,7 @@ int ha_sequence::write_row(const uchar *buf)
         on master and slaves
       - Check that the new row is an accurate SEQUENCE object
     */
+    thd->variables.option_bits |= OPTION_RPL_SKIP_PARALLEL;
     if (table->s->tmp_table == NO_TMP_TABLE &&
         thd->mdl_context.upgrade_shared_lock(table->mdl_ticket,
                                              MDL_EXCLUSIVE,

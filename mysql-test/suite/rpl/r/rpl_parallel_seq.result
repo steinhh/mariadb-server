@@ -1,0 +1,32 @@
+include/master-slave.inc
+[connection master]
+connection slave;
+include/stop_slave.inc
+ALTER TABLE mysql.gtid_slave_pos ENGINE=InnoDB;
+connection master;
+CREATE SEQUENCE s1;
+SET @@session.binlog_row_image=FULL;
+SET @@session.debug_dbug="+d,binlog_force_commit_id";
+set @commit_id=7;
+set @@gtid_seq_no=100;
+SELECT NEXT VALUE FOR s1;
+NEXT VALUE FOR s1
+1
+INSERT INTO s1 VALUES(2, 1, 10, 1, 2, 1, 1, 0);
+SET @@session.debug_dbug="";
+connection slave;
+SET @@global.slave_parallel_threads=2;
+SET @@global.slave_parallel_mode=optimistic;
+SET @@global.debug_dbug="+d,hold_worker_on_schedule";
+include/start_slave.inc
+SET DEBUG_SYNC = 'now SIGNAL continue_worker';
+connection slave;
+SET debug_sync = RESET;
+include/stop_slave.inc
+SET @@global.slave_parallel_threads= 0;
+SET @@global.slave_parallel_mode= conservative;
+SET @@global.debug_dbug = "";
+include/start_slave.inc
+connection master;
+DROP SEQUENCE s1;
+include/rpl_end.inc

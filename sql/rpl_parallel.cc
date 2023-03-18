@@ -2851,11 +2851,13 @@ rpl_parallel::do_event(rpl_group_info *serial_rgi, Log_event *ev,
       if (gtid_flags & Gtid_log_event::FL_DDL)
         flags|= (force_switch_flag= group_commit_orderer::FORCE_SWITCH);
 
-      if (!(flags & group_commit_orderer::MULTI_BATCH))
+      if (!(flags & group_commit_orderer::MULTI_BATCH) &&
+          (gtid_flags & Gtid_log_event::FL_ALLOW_PARALLEL))
       {
         /*
           Still the same batch of event groups that group-committed together
           on the master, so we can run in parallel.
+          Naturally only when the gtid flag allows for that.
         */
         new_gco= false;
       }
