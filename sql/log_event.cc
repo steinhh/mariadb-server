@@ -13762,12 +13762,15 @@ Rows_log_event::write_row(rpl_group_info *rgi,
 int Rows_log_event::update_sequence()
 {
   TABLE *table= m_table;  // pointer to event's table
-  bool old_master= 0; // OLD && full => ser-ze
+  bool old_master= false;
   int err= 0;
 
   if (!bitmap_is_set(table->rpl_write_set, MIN_VALUE_FIELD_NO) ||
-      (table->in_use->rgi_slave->gtid_ev_flags2 &
-       Gtid_log_event::FL_ALLOW_PARALLEL && !old_master))
+      ((table->in_use->rgi_slave->gtid_ev_flags2 &
+        Gtid_log_event::FL_ALLOW_PARALLEL)          &&
+       !(old_master=
+         rpl_master_has_bug(thd->rgi_slave->rli,
+                            29621, FALSE, FALSE, FALSE, TRUE))))
   {
     /* This event come from a setval function executed on the master.
        Update the sequence next_number and round, like we do with setval()

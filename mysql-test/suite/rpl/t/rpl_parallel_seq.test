@@ -7,6 +7,8 @@
 --source include/stop_slave.inc
 ALTER TABLE mysql.gtid_slave_pos ENGINE=InnoDB;
 
+--echo # MDEV-29621 the sequence engine binlog_row_image-full events
+--echo #            MDL-deadlock on the parallel slave.
 --connection master
 CREATE SEQUENCE s1;
 SET @@session.binlog_row_image=FULL;
@@ -29,8 +31,42 @@ SET @@global.debug_dbug="+d,hold_worker_on_schedule";
 --source include/wait_condition.inc
 SET DEBUG_SYNC = 'now SIGNAL continue_worker';
 
-# Clean up.
+--connection master
+DROP SEQUENCE s1;
+--sync_slave_with_master
+--source include/stop_slave.inc
 
+--echo # Simulate buggy 10.3.36 master to prove the parallel applier
+--echo # does not deadlock now at replaying the above master load.
+--connection master
+--let $datadir= `SELECT @@datadir`
+
+--let $rpl_server_number= 1
+--source include/rpl_stop_server.inc
+
+--remove_file $datadir/master-bin.000001
+--copy_file $MYSQL_TEST_DIR/std_data/rpl/master-bin-seq_10.3.36.000001 $datadir/master-bin.000001
+
+--let $rpl_server_number= 1
+--source include/rpl_start_server.inc
+
+--source include/wait_until_connected_again.inc
+--save_master_pos
+
+--connection slave
+--replace_result $SERVER_MYPORT_1 SERVER_MYPORT_1
+eval CHANGE MASTER TO master_host='127.0.0.1', master_port=$SERVER_MYPORT_1, master_user='root', master_log_file='master-bin.000001', master_log_pos=4;
+--source include/start_slave.inc
+
+--let $wait_condition= SELECT count(*) = 1 FROM information_schema.processlist WHERE state LIKE "Waiting for prior transaction to commit"
+--source include/wait_condition.inc
+SET DEBUG_SYNC = 'now SIGNAL continue_worker';
+
+--sync_with_master
+
+#
+# MDEV-29621 clean up.
+#
 --connection slave
 SET debug_sync = RESET;
 --source include/stop_slave.inc
@@ -39,7 +75,5 @@ SET debug_sync = RESET;
        SET @@global.debug_dbug = "";
 --source include/start_slave.inc
 
---connection master
-DROP SEQUENCE s1;
 
 --source include/rpl_end.inc
