@@ -28,6 +28,7 @@ Created 2012-02-08 by Sunny Bains
 #define row0import_h
 
 #include "dict0types.h"
+#include <handler.h>
 
 // Forward declarations
 struct trx_t;
@@ -63,5 +64,13 @@ dberr_t row_import_update_discarded_flag(trx_t* trx, table_id_t table_id,
 dberr_t
 row_import_update_index_root(trx_t* trx, dict_table_t* table, bool reset)
 	MY_ATTRIBUTE((nonnull, warn_unused_result));
+
+/** Prepare the create info to create a new stub table for import.
+@param[in]	thd		Connection
+@param[in]	name		Table name, format: "db/table_name".
+@param[in,out]	create_info	The create info for creating a stub.
+@return	0 if success else error number. */
+int prepare_create_stub_for_import(THD *thd, const char *name,
+                                          HA_CREATE_INFO& create_info);
 
 #endif /* row0import_h */
