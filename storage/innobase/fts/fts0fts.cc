@@ -2304,6 +2304,7 @@ fts_trx_table_clone(
 	return(ftt);
 }
 
+static dberr_t fts_sync_low(fts_sync_t *sync);
 /******************************************************************//**
 Initialize the FTS trx instance.
 @return FTS trx instance */
@@ -2404,6 +2405,15 @@ fts_trx_add_op(
 
 	if (!trx->fts_trx) {
 		trx->fts_trx = fts_trx_create(trx);
+	}
+
+	if (table->fts->cache && table->fts->cache->need_sync) {
+		mysql_mutex_lock(&table->fts->cache->lock);
+		if (table->fts->cache->need_sync)
+		{
+		  table->fts->cache->need_sync = false;
+		  fts_sync_low(table->fts->cache->sync);
+		} else mysql_mutex_unlock(&table->fts->cache->lock);
 	}
 
 	tran_ftt = fts_trx_init(trx, table, trx->fts_trx->savepoints);
@@ -3355,7 +3365,6 @@ fts_add_doc_by_id(
 	dict_index_t*	fts_id_index;
 	ibool		is_id_cluster;
 	fts_cache_t*   	cache = ftt->table->fts->cache;
-	bool		need_sync= false;
 	ut_ad(cache->get_docs);
 
 	/* If Doc ID has been supplied by the user, then the table
@@ -3495,14 +3504,6 @@ fts_add_doc_by_id(
 					get_doc->index_cache,
 					doc_id, doc.tokens);
 
-				/** FTS cache sync should happen
-				frequently. Because user thread
-				shouldn't hold the cache lock for
-				longer time. So cache should sync
-				whenever cache size exceeds 512 KB */
-				need_sync =
-					cache->total_size > 512*1024;
-
 				mysql_mutex_unlock(&table->fts->cache->lock);
 
 				DBUG_EXECUTE_IF(
@@ -3518,7 +3519,7 @@ fts_add_doc_by_id(
 				DEBUG_SYNC_C("fts_instrument_sync_request");
 				DBUG_EXECUTE_IF(
 					"fts_instrument_sync_request",
-					need_sync= true;
+					fts_sync(cache->sync);
 				);
 
 				mtr_start(&mtr);
@@ -3547,9 +3548,7 @@ func_exit:
 
 	mem_heap_free(heap);
 
-	if (need_sync) {
-		fts_sync_table(table);
-	}
+	cache->need_sync = cache->total_size > 512 *1024;;
 }
 
 
@@ -4137,11 +4136,70 @@ fts_sync_commit(
 	return(error);
 }
 
+/** Run SYNC operation of the table and its associated fts indexes
+@param	sync	sync state
+@return DB_SUCCESS if all OK */
+static dberr_t fts_sync_low(fts_sync_t *sync)
+{
+  dberr_t error = DB_SUCCESS;
+  fts_cache_t *cache= sync->table->fts->cache;
+  DEBUG_SYNC_C("fts_sync_begin");
+  fts_sync_begin(sync);
+
+  const size_t fts_cache_size= fts_max_cache_size;
+  if (cache->total_size > fts_cache_size)
+    /* Avoid the case: sync never finish when
+    insert/update keeps comming. */
+    ib::warn() << "Total InnoDB FTS size "
+      << cache->total_size << " for the table "
+      << cache->sync->table->name
+      << " exceeds the innodb_ft_cache_size "
+      << fts_cache_size;
+
+  for (ulint i = 0; i < ib_vector_size(cache->indexes); ++i)
+  {
+    fts_index_cache_t*	index_cache= static_cast<fts_index_cache_t*>(
+      ib_vector_get(cache->indexes, i));
+    if (index_cache->index->to_be_dropped)
+      continue;
+
+    DBUG_EXECUTE_IF("fts_instrument_sync_before_syncing",
+                    std::this_thread::sleep_for(
+			std::chrono::milliseconds(300)););
+    error = fts_sync_index(sync, index_cache);
+
+    if (error != DB_SUCCESS)
+      goto err_exit;
+  }
+
+  DBUG_EXECUTE_IF("fts_instrument_sync_interrupted",
+                  error = DB_INTERRUPTED;
+                  goto err_exit;);
+
+   if (error == DB_SUCCESS)
+     error = fts_sync_commit(sync);
+   else
+   {
+err_exit:
+     fts_sync_rollback(sync);
+     return error;
+   }
+
+   /* We need to check whether an optimize is required, for that
+   we make copies of the two variables that control the trigger. These
+   variables can change behind our back and we don't want to hold the
+   lock for longer than is needed. */
+   mysql_mutex_lock(&cache->deleted_lock);
+   cache->added = 0;
+   cache->deleted = 0;
+   mysql_mutex_unlock(&cache->deleted_lock);
+   DEBUG_SYNC_C("fts_sync_end");
+   return(error);
+}
+
 /** Run SYNC on the table, i.e., write out data from the cache to the
 FTS auxiliary INDEX table and clear the cache at the end.
 @param[in,out]	sync		sync state
-@param[in]	unlock_cache	whether unlock cache lock when write node
-@param[in]	wait		whether wait when a sync is in progress
 @return DB_SUCCESS if all OK */
 static dberr_t fts_sync(fts_sync_t *sync)
 {
@@ -4149,71 +4207,8 @@ static dberr_t fts_sync(fts_sync_t *sync)
 		return DB_READ_ONLY;
 	}
 
-	ulint		i;
-	dberr_t		error = DB_SUCCESS;
-	fts_cache_t*	cache = sync->table->fts->cache;
-
-	mysql_mutex_lock(&cache->lock);
-	DEBUG_SYNC_C("fts_sync_begin");
-	fts_sync_begin(sync);
-
-	const size_t fts_cache_size= fts_max_cache_size;
-	if (cache->total_size > fts_cache_size) {
-		/* Avoid the case: sync never finish when
-		insert/update keeps comming. */
-		ib::warn() << "Total InnoDB FTS size "
-			<< cache->total_size << " for the table "
-			<< cache->sync->table->name
-			<< " exceeds the innodb_ft_cache_size "
-			<< fts_cache_size;
-	}
-
-	for (i = 0; i < ib_vector_size(cache->indexes); ++i) {
-		fts_index_cache_t*	index_cache;
-
-		index_cache = static_cast<fts_index_cache_t*>(
-			ib_vector_get(cache->indexes, i));
-
-		if (index_cache->index->to_be_dropped) {
-			continue;
-		}
-
-		DBUG_EXECUTE_IF("fts_instrument_sync_before_syncing",
-				std::this_thread::sleep_for(
-					std::chrono::milliseconds(300)););
-		error = fts_sync_index(sync, index_cache);
-
-		if (error != DB_SUCCESS) {
-			goto err_exit;
-		}
-	}
-
-	DBUG_EXECUTE_IF("fts_instrument_sync_interrupted",
-			error = DB_INTERRUPTED;
-			goto err_exit;
-	);
-
-	if (error == DB_SUCCESS) {
-		error = fts_sync_commit(sync);
-	} else {
-err_exit:
-		fts_sync_rollback(sync);
-		return error;
-	}
-
-	/* We need to check whether an optimize is required, for that
-	we make copies of the two variables that control the trigger. These
-	variables can change behind our back and we don't want to hold the
-	lock for longer than is needed. */
-	mysql_mutex_lock(&cache->deleted_lock);
-
-	cache->added = 0;
-	cache->deleted = 0;
-
-	mysql_mutex_unlock(&cache->deleted_lock);
-
-	DEBUG_SYNC_C("fts_sync_end");
-	return(error);
+	mysql_mutex_lock(&sync->table->fts->cache->lock);
+	return fts_sync_low(sync);
 }
 
 /** Run SYNC on the table, i.e., write out data from the cache to the

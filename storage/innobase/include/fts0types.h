@@ -152,6 +152,9 @@ struct fts_cache_t
 
 	fts_stopword_t	stopword_info;	/*!< Cached stopwords for the FTS */
 	mem_heap_t*	cache_heap;	/*!< Cache Heap */
+
+	/** Need sync of fts cache when table fts cache exceeds 512kb */
+	std::atomic<bool> need_sync;
 };
 
 /** Columns of the FTS auxiliary INDEX table */
