@@ -13,3 +13,5 @@ t1.new
 DROP TABLE t1;
 DROP TABLE t2;
 DROP DATABASE db2;
+NOT FOUND /Operating system error number/ in backup.log
+NOT FOUND /Could not find a valid tablespace file for/ in backup.log
