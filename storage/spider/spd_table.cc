@@ -5063,11 +5063,9 @@ SPIDER_SHARE *spider_get_share(
         }
       }
 
-      if (
-        (
-          !same_server_link ||
-          load_sts_at_startup
-        ) &&
+      if ((!same_server_link || load_sts_at_startup) &&
+          !(thd_sql_command(current_thd) == SQLCOM_CREATE_TABLE &&
+            thd_ddl_options(current_thd)->or_replace()) &&
         (*error_num = spider_get_sts(share, spider->search_link_idx, tmp_time,
           spider, sts_interval, sts_mode, sts_sync, 1))
       ) {
@@ -5083,11 +5081,9 @@ SPIDER_SHARE *spider_get_share(
           goto error_after_alloc_dbton_handler;
         }
       }
-      if (
-        (
-          !same_server_link ||
-          load_crd_at_startup
-        ) &&
+      if ((!same_server_link || load_crd_at_startup) &&
+          !(thd_sql_command(current_thd) == SQLCOM_CREATE_TABLE &&
+            thd_ddl_options(current_thd)->or_replace()) &&
         (*error_num = spider_get_crd(share, spider->search_link_idx, tmp_time,
           spider, table, crd_interval, crd_mode,
           crd_sync,
