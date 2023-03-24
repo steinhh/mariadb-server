@@ -6700,9 +6700,8 @@ int ha_spider::info(
             if ((error_num = spider_get_sts(share, search_link_idx, tmp_time,
                 this, sts_interval, sts_mode,
                 sts_sync,
-                share->sts_init ? 2 : 1,
-                flag | (share->sts_init ? 0 : HA_STATUS_AUTO)))
-            ) {
+                share->sts_init ? 2 : 1)))
+            {
               pthread_mutex_unlock(&share->sts_mutex);
               if (
                 share->monitoring_kind[search_link_idx] &&

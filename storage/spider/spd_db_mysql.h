@@ -1380,8 +1380,7 @@ public:
   );
   int show_table_status(
     int link_idx,
-    int sts_mode,
-    uint flag
+    int sts_mode
   );
   int crd_mode_exchange(
     int crd_mode

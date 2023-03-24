@@ -583,8 +583,7 @@ int spider_get_sts(
   double sts_interval,
   int sts_mode,
   int sts_sync,
-  int sts_sync_level,
-  uint flag
+  int sts_sync_level
 );
 
 int spider_get_crd(

@@ -1451,8 +1451,7 @@ public:
   ) = 0;
   virtual int show_table_status(
     int link_idx,
-    int sts_mode,
-    uint flag
+    int sts_mode
   ) = 0;
   virtual int crd_mode_exchange(
     int crd_mode

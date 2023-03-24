@@ -702,8 +702,7 @@ int spider_db_seek_tmp_minimum_columns(
 int spider_db_show_table_status(
   ha_spider *spider,
   int link_idx,
-  int sts_mode,
-  uint flag
+  int sts_mode
 );
 
 int spider_db_simple_action(

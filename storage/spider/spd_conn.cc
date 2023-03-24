@@ -3039,8 +3039,7 @@ void *spider_bg_sts_action(
           if (spider_get_sts(share, spider.search_link_idx,
             share->bg_sts_try_time, &spider,
             share->bg_sts_interval, share->bg_sts_mode,
-            share->bg_sts_sync,
-            2, HA_STATUS_CONST | HA_STATUS_VARIABLE))
+            share->bg_sts_sync, 2))
           {
 /*
             if (

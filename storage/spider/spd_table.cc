@@ -5055,9 +5055,7 @@ SPIDER_SHARE *spider_get_share(
           load_sts_at_startup
         ) &&
         (*error_num = spider_get_sts(share, spider->search_link_idx, tmp_time,
-          spider, sts_interval, sts_mode,
-          sts_sync,
-          1, HA_STATUS_VARIABLE | HA_STATUS_CONST | HA_STATUS_AUTO))
+          spider, sts_interval, sts_mode, sts_sync, 1))
       ) {
         if (*error_num != ER_SPIDER_SYS_TABLE_VERSION_NUM)
         {
@@ -5492,7 +5490,7 @@ SPIDER_SHARE *spider_get_share(
             (*error_num = spider_get_sts(share, spider->search_link_idx,
               tmp_time, spider, sts_interval, sts_mode,
               sts_sync,
-              1, HA_STATUS_VARIABLE | HA_STATUS_CONST | HA_STATUS_AUTO))
+              1))
           ) {
             if (*error_num != ER_SPIDER_SYS_TABLE_VERSION_NUM)
             {
@@ -5875,24 +5873,6 @@ int spider_free_wide_share(
   }
   pthread_mutex_unlock(&spider_wide_share_mutex);
   DBUG_RETURN(0);
-}
-
-void spider_copy_sts_to_wide_share(
-  SPIDER_WIDE_SHARE *wide_share,
-  SPIDER_SHARE *share
-) {
-  DBUG_ENTER("spider_copy_sts_to_pt_share");
-  wide_share->stat = share->stat;
-  DBUG_VOID_RETURN;
-}
-
-void spider_copy_sts_to_share(
-  SPIDER_SHARE *share,
-  SPIDER_WIDE_SHARE *wide_share
-) {
-  DBUG_ENTER("spider_copy_sts_to_share");
-  share->stat = wide_share->stat;
-  DBUG_VOID_RETURN;
 }
 
 void spider_copy_crd_to_wide_share(
@@ -7055,8 +7035,7 @@ int spider_get_sts(
   double sts_interval,
   int sts_mode,
   int sts_sync,
-  int sts_sync_level,
-  uint flag
+  int sts_sync_level
 ) {
   int get_type;
   int error_num = 0;
@@ -7118,12 +7097,11 @@ int spider_get_sts(
   if (need_to_get)
   {
     if (get_type == 0)
-      /* Copy table status from share to share->wide_share */
-      spider_copy_sts_to_share(share, share->wide_share);
+      share->stat = share->wide_share->stat;
     else {
       /* Executes a `show table status` query and store the results in
-      share->stat */
-      error_num = spider_db_show_table_status(spider, link_idx, sts_mode, flag);
+      spider->share->stat */
+      error_num = spider_db_show_table_status(spider, link_idx, sts_mode);
     }
   }
   if (get_type >= 2)
@@ -7158,14 +7136,14 @@ int spider_get_sts(
         tmp_sts_mode = spider_param_sts_mode(thd, share->sts_mode);
         tmp_sts_sync = spider_param_sts_sync(thd, share->sts_sync);
         spider_get_sts(tmp_share, tmp_spider->search_link_idx,
-          tmp_time, tmp_spider, tmp_sts_interval, tmp_sts_mode, tmp_sts_sync,
-          1, flag);
+                       tmp_time, tmp_spider, tmp_sts_interval, tmp_sts_mode,
+                       tmp_sts_sync, 1);
         if (share->wide_share->sts_init)
         {
           error_num = 0;
           thd->clear_error();
           get_type = 0;
-          spider_copy_sts_to_share(share, share->wide_share);
+          share->stat = share->wide_share->stat;
           break;
         }
       }
@@ -7175,7 +7153,7 @@ int spider_get_sts(
   }
   if (sts_sync >= sts_sync_level && get_type > 0)
   {
-    spider_copy_sts_to_wide_share(share->wide_share, share);
+    share->wide_share->stat = share->stat;
     share->wide_share->sts_get_time = tmp_time;
     share->wide_share->sts_init = TRUE;
   }
@@ -9163,8 +9141,7 @@ void *spider_table_bg_sts_action(
           if (spider_get_sts(share, spider->search_link_idx,
             share->bg_sts_try_time, spider,
             share->bg_sts_interval, share->bg_sts_mode,
-            share->bg_sts_sync,
-            2, HA_STATUS_CONST | HA_STATUS_VARIABLE))
+            share->bg_sts_sync, 2))
           {
             spider->search_link_idx = -1;
           }

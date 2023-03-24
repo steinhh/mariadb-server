@@ -5212,8 +5212,7 @@ int spider_db_seek_tmp_minimum_columns(
 int spider_db_show_table_status(
   ha_spider *spider,
   int link_idx,
-  int sts_mode,
-  uint flag
+  int sts_mode
 ) {
   int error_num;
   SPIDER_CONN *conn = spider->conns[link_idx];
@@ -5223,8 +5222,7 @@ int spider_db_show_table_status(
   sts_mode = dbton_hdl->sts_mode_exchange(sts_mode);
   error_num = dbton_hdl->show_table_status(
     link_idx,
-    sts_mode,
-    flag
+    sts_mode
   );
   DBUG_RETURN(error_num);
 }

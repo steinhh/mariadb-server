@@ -13456,8 +13456,7 @@ int spider_mbase_handler::sts_mode_exchange(
 */
 int spider_mbase_handler::show_table_status(
   int link_idx,
-  int sts_mode,
-  uint flag
+  int sts_mode
 ) {
   int error_num;
   SPIDER_CONN *conn = spider->conns[link_idx];
