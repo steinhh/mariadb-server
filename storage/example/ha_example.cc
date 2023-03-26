@@ -86,7 +86,7 @@
   ha_example::open() would also have been necessary. Calls to
   ha_example::extra() are hints as to what will be occuring to the request.
 
-  A Longer Example can be found called the "Skeleton Engine" which can be 
+  A Longer Example can be found called the "Skeleton Engine" which can be
   found on TangentOrg. It has both an engine and a full build environment
   for building a pluggable storage engine.
 
@@ -95,7 +95,7 @@
 */
 
 #ifdef USE_PRAGMA_IMPLEMENTATION
-#pragma implementation        // gcc: Class implementation
+#pragma implementation // gcc: Class implementation
 #endif
 
 #include <my_config.h>
@@ -103,14 +103,14 @@
 #include "ha_example.h"
 #include "sql_class.h"
 
-static handler *example_create_handler(handlerton *hton,
-                                       TABLE_SHARE *table, 
+static handler *example_create_handler(handlerton *hton, TABLE_SHARE *table,
                                        MEM_ROOT *mem_root);
 
 handlerton *example_hton;
 
 static MYSQL_THDVAR_ULONG(varopt_default, PLUGIN_VAR_RQCMDARG,
-  "default value of the VAROPT table option", NULL, NULL, 5, 0, 100, 0);
+                          "default value of the VAROPT table option", NULL,
+                          NULL, 5, 0, 100, 0);
 
 /**
   Structure for CREATE TABLE options (table options).
@@ -128,7 +128,6 @@ struct ha_table_option_struct
   bool boolparam;
   ulonglong varparam;
 };
-
 
 /**
   Structure for CREATE TABLE options (field options).
@@ -151,48 +150,43 @@ struct ha_field_option_struct
   CREATE TABLE ( field ..., .., INDEX .... *here*, ... )
 */
 
-ha_create_table_option example_table_option_list[]=
-{
-  /*
-    one numeric option, with the default of UINT_MAX32, valid
-    range of values 0..UINT_MAX32, and a "block size" of 10
-    (any value must be divisible by 10).
-  */
-  HA_TOPTION_NUMBER("ULL", ullparam, UINT_MAX32, 0, UINT_MAX32, 10),
-  /*
-    one option that takes an arbitrary string
-  */
-  HA_TOPTION_STRING("STR", strparam),
-  /*
-    one enum option. a valid values are strings ONE and TWO.
-    A default value is 0, that is "one".
-  */
-  HA_TOPTION_ENUM("one_or_two", enumparam, "one,two", 0),
-  /*
-    one boolean option, the valid values are YES/NO, ON/OFF, 1/0.
-    The default is 1, that is true, yes, on.
-  */
-  HA_TOPTION_BOOL("YESNO", boolparam, 1),
-  /*
-    one option defined by the system variable. The type, the range, or
-    a list of allowed values is the same as for the system variable.
-  */
-  HA_TOPTION_SYSVAR("VAROPT", varparam, varopt_default),
+ha_create_table_option example_table_option_list[]= {
+    /*
+      one numeric option, with the default of UINT_MAX32, valid
+      range of values 0..UINT_MAX32, and a "block size" of 10
+      (any value must be divisible by 10).
+    */
+    HA_TOPTION_NUMBER("ULL", ullparam, UINT_MAX32, 0, UINT_MAX32, 10),
+    /*
+      one option that takes an arbitrary string
+    */
+    HA_TOPTION_STRING("STR", strparam),
+    /*
+      one enum option. a valid values are strings ONE and TWO.
+      A default value is 0, that is "one".
+    */
+    HA_TOPTION_ENUM("one_or_two", enumparam, "one,two", 0),
+    /*
+      one boolean option, the valid values are YES/NO, ON/OFF, 1/0.
+      The default is 1, that is true, yes, on.
+    */
+    HA_TOPTION_BOOL("YESNO", boolparam, 1),
+    /*
+      one option defined by the system variable. The type, the range, or
+      a list of allowed values is the same as for the system variable.
+    */
+    HA_TOPTION_SYSVAR("VAROPT", varparam, varopt_default),
 
-  HA_TOPTION_END
-};
+    HA_TOPTION_END};
 
-ha_create_table_option example_field_option_list[]=
-{
-  /*
-    If the engine wants something more complex than a string, number, enum,
-    or boolean - for example a list - it needs to specify the option
-    as a string and parse it internally.
-  */
-  HA_FOPTION_STRING("COMPLEX", complex_param_to_parse_it_in_engine),
-  HA_FOPTION_END
-};
-
+ha_create_table_option example_field_option_list[]= {
+    /*
+      If the engine wants something more complex than a string, number, enum,
+      or boolean - for example a list - it needs to specify the option
+      as a string and parse it internally.
+    */
+    HA_FOPTION_STRING("COMPLEX", complex_param_to_parse_it_in_engine),
+    HA_FOPTION_END};
 
 /**
   @brief
@@ -202,23 +196,20 @@ ha_create_table_option example_field_option_list[]=
 #ifdef HAVE_PSI_INTERFACE
 static PSI_mutex_key ex_key_mutex_Example_share_mutex;
 
-static PSI_mutex_info all_example_mutexes[]=
-{
-  { &ex_key_mutex_Example_share_mutex, "Example_share::mutex", 0}
-};
+static PSI_mutex_info all_example_mutexes[]= {
+    {&ex_key_mutex_Example_share_mutex, "Example_share::mutex", 0}};
 
 static void init_example_psi_keys()
 {
-  const char* category= "example";
+  const char *category= "example";
   int count;
 
   count= array_elements(all_example_mutexes);
   mysql_mutex_register(category, all_example_mutexes, count);
 }
 #else
-static void init_example_psi_keys() { }
+static void init_example_psi_keys() {}
 #endif
-
 
 /**
   @brief
@@ -238,17 +229,14 @@ static void init_example_psi_keys() { }
   delete_table method in handler.cc
 */
 
-static const char *ha_example_exts[] = {
-  NullS
-};
+static const char *ha_example_exts[]= {NullS};
 
 Example_share::Example_share()
 {
   thr_lock_init(&lock);
-  mysql_mutex_init(ex_key_mutex_Example_share_mutex,
-                   &mutex, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(ex_key_mutex_Example_share_mutex, &mutex,
+                   MY_MUTEX_INIT_FAST);
 }
-
 
 static int example_init_func(void *p)
 {
@@ -256,17 +244,16 @@ static int example_init_func(void *p)
 
   init_example_psi_keys();
 
-  example_hton= (handlerton *)p;
-  example_hton->create=  example_create_handler;
-  example_hton->flags=   HTON_CAN_RECREATE;
+  example_hton= (handlerton *) p;
+  example_hton->create= example_create_handler;
+  example_hton->flags= HTON_CAN_RECREATE;
   example_hton->table_options= example_table_option_list;
   example_hton->field_options= example_field_option_list;
   example_hton->tablefile_extensions= ha_example_exts;
-  example_hton->drop_table= [](handlerton *, const char*) { return -1; };
+  example_hton->drop_table= [](handlerton *, const char *) { return -1; };
 
   DBUG_RETURN(0);
 }
-
 
 /**
   @brief
@@ -283,30 +270,29 @@ Example_share *ha_example::get_share()
   DBUG_ENTER("ha_example::get_share()");
 
   lock_shared_ha_data();
-  if (!(tmp_share= static_cast<Example_share*>(get_ha_share_ptr())))
+  if (!(tmp_share= static_cast<Example_share *>(get_ha_share_ptr())))
   {
     tmp_share= new Example_share;
     if (!tmp_share)
       goto err;
 
-    set_ha_share_ptr(static_cast<Handler_share*>(tmp_share));
+    set_ha_share_ptr(static_cast<Handler_share *>(tmp_share));
   }
 err:
   unlock_shared_ha_data();
   DBUG_RETURN(tmp_share);
 }
 
-static handler* example_create_handler(handlerton *hton,
-                                       TABLE_SHARE *table, 
+static handler *example_create_handler(handlerton *hton, TABLE_SHARE *table,
                                        MEM_ROOT *mem_root)
 {
   return new (mem_root) ha_example(hton, table);
 }
 
 ha_example::ha_example(handlerton *hton, TABLE_SHARE *table_arg)
-  :handler(hton, table_arg)
-{}
-
+    : handler(hton, table_arg)
+{
+}
 
 /**
   @brief
@@ -328,23 +314,23 @@ int ha_example::open(const char *name, int mode, uint test_if_locked)
 {
   DBUG_ENTER("ha_example::open");
 
-  if (!(share = get_share()))
+  if (!(share= get_share()))
     DBUG_RETURN(1);
-  thr_lock_data_init(&share->lock,&lock,NULL);
+  thr_lock_data_init(&share->lock, &lock, NULL);
 
 #ifndef DBUG_OFF
   ha_table_option_struct *options= table->s->option_struct;
 
   DBUG_ASSERT(options);
-  DBUG_PRINT("info", ("strparam: '%-.64s'  ullparam: %llu  enumparam: %u  "\
-                      "boolparam: %u",
-                      (options->strparam ? options->strparam : "<NULL>"),
-                      options->ullparam, options->enumparam, options->boolparam));
+  DBUG_PRINT("info",
+             ("strparam: '%-.64s'  ullparam: %llu  enumparam: %u  "
+              "boolparam: %u",
+              (options->strparam ? options->strparam : "<NULL>"),
+              options->ullparam, options->enumparam, options->boolparam));
 #endif
 
   DBUG_RETURN(0);
 }
-
 
 /**
   @brief
@@ -366,7 +352,6 @@ int ha_example::close(void)
   DBUG_ENTER("ha_example::close");
   DBUG_RETURN(0);
 }
-
 
 /**
   @brief
@@ -410,13 +395,12 @@ int ha_example::write_row(const uchar *buf)
   DBUG_RETURN(0);
 }
 
-
 /**
   @brief
   Yes, update_row() does what you expect, it updates a row. old_data will have
-  the previous row record in it, while new_data will have the newest data in it.
-  Keep in mind that the server can do updates based on ordering if an ORDER BY
-  clause was used. Consecutive ordering is not guaranteed.
+  the previous row record in it, while new_data will have the newest data in
+  it. Keep in mind that the server can do updates based on ordering if an ORDER
+  BY clause was used. Consecutive ordering is not guaranteed.
 
   @details
   Currently new_data will not have an updated auto_increament record, or
@@ -437,7 +421,6 @@ int ha_example::update_row(const uchar *old_data, const uchar *new_data)
   DBUG_ENTER("ha_example::update_row");
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
-
 
 /**
   @brief
@@ -465,7 +448,6 @@ int ha_example::delete_row(const uchar *buf)
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
-
 /**
   @brief
   Positions an index cursor to the index specified in the handle. Fetches the
@@ -474,7 +456,8 @@ int ha_example::delete_row(const uchar *buf)
 */
 
 int ha_example::index_read_map(uchar *buf, const uchar *key,
-                               key_part_map keypart_map __attribute__((unused)),
+                               key_part_map keypart_map
+                               __attribute__((unused)),
                                enum ha_rkey_function find_flag
                                __attribute__((unused)))
 {
@@ -483,7 +466,6 @@ int ha_example::index_read_map(uchar *buf, const uchar *key,
   rc= HA_ERR_WRONG_COMMAND;
   DBUG_RETURN(rc);
 }
-
 
 /**
   @brief
@@ -498,7 +480,6 @@ int ha_example::index_next(uchar *buf)
   DBUG_RETURN(rc);
 }
 
-
 /**
   @brief
   Used to read backwards through the index.
@@ -511,7 +492,6 @@ int ha_example::index_prev(uchar *buf)
   rc= HA_ERR_WRONG_COMMAND;
   DBUG_RETURN(rc);
 }
-
 
 /**
   @brief
@@ -531,7 +511,6 @@ int ha_example::index_first(uchar *buf)
   DBUG_RETURN(rc);
 }
 
-
 /**
   @brief
   index_last() asks for the last key in the index.
@@ -550,7 +529,6 @@ int ha_example::index_last(uchar *buf)
   DBUG_RETURN(rc);
 }
 
-
 /**
   @brief
   rnd_init() is called when the system wants the storage engine to do a table
@@ -558,11 +536,12 @@ int ha_example::index_last(uchar *buf)
   rnd_init() is called.
 
   @details
-  Called from filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc,
-  and sql_update.cc.
+  Called from filesort.cc, records.cc, sql_handler.cc, sql_select.cc,
+  sql_table.cc, and sql_update.cc.
 
   @see
-  filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and sql_update.cc
+  filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and
+  sql_update.cc
 */
 int ha_example::rnd_init(bool scan)
 {
@@ -576,7 +555,6 @@ int ha_example::rnd_end()
   DBUG_RETURN(0);
 }
 
-
 /**
   @brief
   This is called for each row of the table scan. When you run out of records
@@ -585,11 +563,12 @@ int ha_example::rnd_end()
   in a manner that will allow the server to understand it.
 
   @details
-  Called from filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc,
-  and sql_update.cc.
+  Called from filesort.cc, records.cc, sql_handler.cc, sql_select.cc,
+  sql_table.cc, and sql_update.cc.
 
   @see
-  filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and sql_update.cc
+  filesort.cc, records.cc, sql_handler.cc, sql_select.cc, sql_table.cc and
+  sql_update.cc
 */
 int ha_example::rnd_next(uchar *buf)
 {
@@ -598,7 +577,6 @@ int ha_example::rnd_next(uchar *buf)
   rc= HA_ERR_END_OF_FILE;
   DBUG_RETURN(rc);
 }
-
 
 /**
   @brief
@@ -627,7 +605,6 @@ void ha_example::position(const uchar *record)
   DBUG_VOID_RETURN;
 }
 
-
 /**
   @brief
   This is like rnd_next, but you are given a position to use
@@ -636,7 +613,8 @@ void ha_example::position(const uchar *record)
   or position you saved when position() was called.
 
   @details
-  Called from filesort.cc, records.cc, sql_insert.cc, sql_select.cc, and sql_update.cc.
+  Called from filesort.cc, records.cc, sql_insert.cc, sql_select.cc, and
+  sql_update.cc.
 
   @see
   filesort.cc, records.cc, sql_insert.cc, sql_select.cc and sql_update.cc
@@ -649,15 +627,14 @@ int ha_example::rnd_pos(uchar *buf, uchar *pos)
   DBUG_RETURN(rc);
 }
 
-
 /**
   @brief
   ::info() is used to return information to the optimizer. See my_base.h for
   the complete description.
 
   @details
-  Currently this table handler doesn't implement most of the fields really needed.
-  SHOW also makes use of this data.
+  Currently this table handler doesn't implement most of the fields really
+  needed. SHOW also makes use of this data.
 
   You will probably want to have the following in your code:
   @code
@@ -679,21 +656,20 @@ int ha_example::rnd_pos(uchar *buf, uchar *pos)
 
   Called in filesort.cc, ha_heap.cc, item_sum.cc, opt_sum.cc, sql_delete.cc,
   sql_delete.cc, sql_derived.cc, sql_select.cc, sql_select.cc, sql_select.cc,
-  sql_select.cc, sql_select.cc, sql_show.cc, sql_show.cc, sql_show.cc, sql_show.cc,
-  sql_table.cc, sql_union.cc, and sql_update.cc.
+  sql_select.cc, sql_select.cc, sql_show.cc, sql_show.cc, sql_show.cc,
+  sql_show.cc, sql_table.cc, sql_union.cc, and sql_update.cc.
 
   @see
-  filesort.cc, ha_heap.cc, item_sum.cc, opt_sum.cc, sql_delete.cc, sql_delete.cc,
-  sql_derived.cc, sql_select.cc, sql_select.cc, sql_select.cc, sql_select.cc,
-  sql_select.cc, sql_show.cc, sql_show.cc, sql_show.cc, sql_show.cc, sql_table.cc,
-  sql_union.cc and sql_update.cc
+  filesort.cc, ha_heap.cc, item_sum.cc, opt_sum.cc, sql_delete.cc,
+  sql_delete.cc, sql_derived.cc, sql_select.cc, sql_select.cc, sql_select.cc,
+  sql_select.cc, sql_select.cc, sql_show.cc, sql_show.cc, sql_show.cc,
+  sql_show.cc, sql_table.cc, sql_union.cc and sql_update.cc
 */
 int ha_example::info(uint flag)
 {
   DBUG_ENTER("ha_example::info");
   DBUG_RETURN(0);
 }
-
 
 /**
   @brief
@@ -710,11 +686,11 @@ int ha_example::extra(enum ha_extra_function operation)
   DBUG_RETURN(0);
 }
 
-
 /**
   @brief
-  Used to delete all rows in a table, including cases of truncate and cases where
-  the optimizer realizes that all rows will be removed as a result of an SQL statement.
+  Used to delete all rows in a table, including cases of truncate and cases
+  where the optimizer realizes that all rows will be removed as a result of an
+  SQL statement.
 
   @details
   Called from item_sum.cc by Item_func_group_concat::clear(),
@@ -736,14 +712,13 @@ int ha_example::delete_all_rows()
   DBUG_RETURN(HA_ERR_WRONG_COMMAND);
 }
 
-
 /**
   @brief
   This create a lock on the table. If you are implementing a storage engine
   that can handle transacations look at ha_berkely.cc to see how you will
   want to go about doing this. Otherwise you should consider calling flock()
-  here. Hint: Read the section "locking functions for mysql" in lock.cc to understand
-  this.
+  here. Hint: Read the section "locking functions for mysql" in lock.cc to
+  understand this.
 
   @details
   Called from lock.cc by lock_external() and unlock_external(). Also called
@@ -759,7 +734,6 @@ int ha_example::external_lock(THD *thd, int lock_type)
   DBUG_ENTER("ha_example::external_lock");
   DBUG_RETURN(0);
 }
-
 
 /**
   @brief
@@ -798,16 +772,14 @@ int ha_example::external_lock(THD *thd, int lock_type)
   @see
   get_lock_data() in lock.cc
 */
-THR_LOCK_DATA **ha_example::store_lock(THD *thd,
-                                       THR_LOCK_DATA **to,
+THR_LOCK_DATA **ha_example::store_lock(THD *thd, THR_LOCK_DATA **to,
                                        enum thr_lock_type lock_type)
 {
   if (lock_type != TL_IGNORE && lock.type == TL_UNLOCK)
-    lock.type=lock_type;
+    lock.type= lock_type;
   *to++= &lock;
   return to;
 }
-
 
 /**
   @brief
@@ -835,7 +807,6 @@ int ha_example::delete_table(const char *name)
   DBUG_RETURN(0);
 }
 
-
 /**
   @brief
   Given a starting key and an ending key, estimate the number of rows that
@@ -853,15 +824,13 @@ int ha_example::delete_table(const char *name)
   @see
   check_quick_keys() in opt_range.cc
 */
-ha_rows ha_example::records_in_range(uint inx,
-                                     const key_range *min_key,
+ha_rows ha_example::records_in_range(uint inx, const key_range *min_key,
                                      const key_range *max_key,
                                      page_range *pages)
 {
   DBUG_ENTER("ha_example::records_in_range");
-  DBUG_RETURN(10);                         // low number to force index usage
+  DBUG_RETURN(10); // low number to force index usage
 }
-
 
 /**
   @brief
@@ -893,24 +862,24 @@ int ha_example::create(const char *name, TABLE *table_arg,
     options.
   */
   DBUG_ASSERT(options);
-  DBUG_PRINT("info", ("strparam: '%-.64s'  ullparam: %llu  enumparam: %u  "\
-                      "boolparam: %u",
-                      (options->strparam ? options->strparam : "<NULL>"),
-                      options->ullparam, options->enumparam, options->boolparam));
+  DBUG_PRINT("info",
+             ("strparam: '%-.64s'  ullparam: %llu  enumparam: %u  "
+              "boolparam: %u",
+              (options->strparam ? options->strparam : "<NULL>"),
+              options->ullparam, options->enumparam, options->boolparam));
   for (Field **field= table_arg->s->field; *field; field++)
   {
     ha_field_option_struct *field_options= (*field)->option_struct;
     DBUG_ASSERT(field_options);
-    DBUG_PRINT("info", ("field: %s  complex: '%-.64s'",
-                         (*field)->field_name.str,
-                         (field_options->complex_param_to_parse_it_in_engine ?
-                          field_options->complex_param_to_parse_it_in_engine :
-                          "<NULL>")));
+    DBUG_PRINT("info",
+               ("field: %s  complex: '%-.64s'", (*field)->field_name.str,
+                (field_options->complex_param_to_parse_it_in_engine
+                     ? field_options->complex_param_to_parse_it_in_engine
+                     : "<NULL>")));
   }
 #endif
   DBUG_RETURN(0);
 }
-
 
 /**
   check_if_supported_inplace_alter() is used to ask the engine whether
@@ -928,8 +897,8 @@ int ha_example::create(const char *name, TABLE *table_arg,
 */
 
 enum_alter_inplace_result
-ha_example::check_if_supported_inplace_alter(TABLE* altered_table,
-                                             Alter_inplace_info* ha_alter_info)
+ha_example::check_if_supported_inplace_alter(TABLE *altered_table,
+                                             Alter_inplace_info *ha_alter_info)
 {
   HA_CREATE_INFO *info= ha_alter_info->create_info;
   DBUG_ENTER("ha_example::check_if_supported_inplace_alter");
@@ -980,7 +949,8 @@ ha_example::check_if_supported_inplace_alter(TABLE* altered_table,
       if (f_new)
       {
         push_warning_printf(ha_thd(), Sql_condition::WARN_LEVEL_NOTE,
-                            ER_UNKNOWN_ERROR, "EXAMPLE DEBUG: Field %`s COMPLEX '%s' -> '%s'",
+                            ER_UNKNOWN_ERROR,
+                            "EXAMPLE DEBUG: Field %`s COMPLEX '%s' -> '%s'",
                             table->s->field[i]->field_name.str,
                             f_old->complex_param_to_parse_it_in_engine,
                             f_new->complex_param_to_parse_it_in_engine);
@@ -993,87 +963,51 @@ ha_example::check_if_supported_inplace_alter(TABLE* altered_table,
   DBUG_RETURN(HA_ALTER_INPLACE_EXCLUSIVE_LOCK);
 }
 
-
-struct st_mysql_storage_engine example_storage_engine=
-{ MYSQL_HANDLERTON_INTERFACE_VERSION };
+struct st_mysql_storage_engine example_storage_engine= {
+    MYSQL_HANDLERTON_INTERFACE_VERSION};
 
 static ulong srv_enum_var= 0;
 static ulong srv_ulong_var= 0;
 static double srv_double_var= 0;
 
-const char *enum_var_names[]=
-{
-  "e1", "e2", NullS
-};
+const char *enum_var_names[]= {"e1", "e2", NullS};
 
-TYPELIB enum_var_typelib=
-{
-  array_elements(enum_var_names) - 1, "enum_var_typelib",
-  enum_var_names, NULL
-};
+TYPELIB enum_var_typelib= {array_elements(enum_var_names) - 1,
+                           "enum_var_typelib", enum_var_names, NULL};
 
-static MYSQL_SYSVAR_ENUM(
-  enum_var,                       // name
-  srv_enum_var,                   // varname
-  PLUGIN_VAR_RQCMDARG,            // opt
-  "Sample ENUM system variable.", // comment
-  NULL,                           // check
-  NULL,                           // update
-  0,                              // def
-  &enum_var_typelib);             // typelib
+static MYSQL_SYSVAR_ENUM(enum_var,                       // name
+                         srv_enum_var,                   // varname
+                         PLUGIN_VAR_RQCMDARG,            // opt
+                         "Sample ENUM system variable.", // comment
+                         NULL,                           // check
+                         NULL,                           // update
+                         0,                              // def
+                         &enum_var_typelib);             // typelib
 
-static MYSQL_THDVAR_INT(int_var, PLUGIN_VAR_RQCMDARG, "-1..1",
-  NULL, NULL, 0, -1, 1, 0);
+static MYSQL_THDVAR_INT(int_var, PLUGIN_VAR_RQCMDARG, "-1..1", NULL, NULL, 0,
+                        -1, 1, 0);
 
-static MYSQL_SYSVAR_ULONG(
-  ulong_var,
-  srv_ulong_var,
-  PLUGIN_VAR_RQCMDARG,
-  "0..1000",
-  NULL,
-  NULL,
-  8,
-  0,
-  1000,
-  0);
+static MYSQL_SYSVAR_ULONG(ulong_var, srv_ulong_var, PLUGIN_VAR_RQCMDARG,
+                          "0..1000", NULL, NULL, 8, 0, 1000, 0);
 
-static MYSQL_SYSVAR_DOUBLE(
-  double_var,
-  srv_double_var,
-  PLUGIN_VAR_RQCMDARG,
-  "0.500000..1000.500000",
-  NULL,
-  NULL,
-  8.5,
-  0.5,
-  1000.5,
-  0);                             // reserved always 0
+static MYSQL_SYSVAR_DOUBLE(double_var, srv_double_var, PLUGIN_VAR_RQCMDARG,
+                           "0.500000..1000.500000", NULL, NULL, 8.5, 0.5,
+                           1000.5,
+                           0); // reserved always 0
 
-static MYSQL_THDVAR_DOUBLE(
-  double_thdvar,
-  PLUGIN_VAR_RQCMDARG,
-  "0.500000..1000.500000",
-  NULL,
-  NULL,
-  8.5,
-  0.5,
-  1000.5,
-  0);
+static MYSQL_THDVAR_DOUBLE(double_thdvar, PLUGIN_VAR_RQCMDARG,
+                           "0.500000..1000.500000", NULL, NULL, 8.5, 0.5,
+                           1000.5, 0);
 
-static MYSQL_THDVAR_INT(
-  deprecated_var, PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_DEPRECATED, "-1..1",
-  NULL, NULL, 0, -1, 1, 0);
+static MYSQL_THDVAR_INT(deprecated_var,
+                        PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_DEPRECATED, "-1..1",
+                        NULL, NULL, 0, -1, 1, 0);
 
-static struct st_mysql_sys_var* example_system_variables[]= {
-  MYSQL_SYSVAR(enum_var),
-  MYSQL_SYSVAR(ulong_var),
-  MYSQL_SYSVAR(int_var),
-  MYSQL_SYSVAR(double_var),
-  MYSQL_SYSVAR(double_thdvar),
-  MYSQL_SYSVAR(deprecated_var),
-  MYSQL_SYSVAR(varopt_default),
-  NULL
-};
+static struct st_mysql_sys_var *example_system_variables[]= {
+    MYSQL_SYSVAR(enum_var),       MYSQL_SYSVAR(ulong_var),
+    MYSQL_SYSVAR(int_var),        MYSQL_SYSVAR(double_var),
+    MYSQL_SYSVAR(double_thdvar),  MYSQL_SYSVAR(deprecated_var),
+    MYSQL_SYSVAR(varopt_default), NULL};
 
 // this is an example of SHOW_SIMPLE_FUNC and of my_snprintf() service
 // If this function would return an array, one should use SHOW_FUNC
@@ -1090,44 +1024,39 @@ static int show_func_example(MYSQL_THD thd, struct st_mysql_show_var *var,
   return 0;
 }
 
-static struct st_mysql_show_var func_status[]=
-{
-  {"func_example",  (char *)show_func_example, SHOW_SIMPLE_FUNC},
-  {0,0,SHOW_UNDEF}
-};
+static struct st_mysql_show_var func_status[]= {
+    {"func_example", (char *) show_func_example, SHOW_SIMPLE_FUNC},
+    {0, 0, SHOW_UNDEF}};
 
-struct st_mysql_daemon unusable_example=
-{ MYSQL_DAEMON_INTERFACE_VERSION };
+struct st_mysql_daemon unusable_example= {MYSQL_DAEMON_INTERFACE_VERSION};
 
-maria_declare_plugin(example)
-{
-  MYSQL_STORAGE_ENGINE_PLUGIN,
-  &example_storage_engine,
-  "EXAMPLE",
-  "Brian Aker, MySQL AB",
-  "Example storage engine",
-  PLUGIN_LICENSE_GPL,
-  example_init_func,                            /* Plugin Init */
-  NULL,                                         /* Plugin Deinit */
-  0x0001,                                       /* version number (0.1) */
-  func_status,                                  /* status variables */
-  example_system_variables,                     /* system variables */
-  "0.1",                                        /* string version */
-  MariaDB_PLUGIN_MATURITY_EXPERIMENTAL          /* maturity */
+maria_declare_plugin(example){
+    MYSQL_STORAGE_ENGINE_PLUGIN,
+    &example_storage_engine,
+    "EXAMPLE",
+    "Brian Aker, MySQL AB",
+    "Example storage engine",
+    PLUGIN_LICENSE_GPL,
+    example_init_func,            /* Plugin Init */
+    NULL,                         /* Plugin Deinit */
+    0x0001,                       /* version number (0.1) */
+    func_status,                  /* status variables */
+    example_system_variables,     /* system variables */
+    "0.1",                        /* string version */
+    MariaDB_PLUGIN_MATURITY_GAMMA /* maturity */
 },
-{
-  MYSQL_DAEMON_PLUGIN,
-  &unusable_example,
-  "UNUSABLE",
-  "Sergei Golubchik",
-  "Unusable Daemon",
-  PLUGIN_LICENSE_GPL,
-  NULL,                                         /* Plugin Init */
-  NULL,                                         /* Plugin Deinit */
-  0x030E,                                       /* version number (3.14) */
-  NULL,                                         /* status variables */
-  NULL,                                         /* system variables */
-  "3.14.15.926" ,                               /* version, as a string */
-  MariaDB_PLUGIN_MATURITY_EXPERIMENTAL          /* maturity */
-}
-maria_declare_plugin_end;
+    {
+        MYSQL_DAEMON_PLUGIN,
+        &unusable_example,
+        "UNUSABLE",
+        "Sergei Golubchik",
+        "Unusable Daemon",
+        PLUGIN_LICENSE_GPL,
+        NULL,                                /* Plugin Init */
+        NULL,                                /* Plugin Deinit */
+        0x030E,                              /* version number (3.14) */
+        NULL,                                /* status variables */
+        NULL,                                /* system variables */
+        "3.14.15.926",                       /* version, as a string */
+        MariaDB_PLUGIN_MATURITY_EXPERIMENTAL /* maturity */
+    } maria_declare_plugin_end;
