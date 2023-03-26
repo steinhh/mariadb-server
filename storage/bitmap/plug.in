@@ -1,0 +1,4 @@
+MYSQL_STORAGE_ENGINE(skeleton,,[Skeleton Storage Engine],
+        [Skeleton Engine for writing engines], [max,max-no-ndb])
+MYSQL_PLUGIN_STATIC(skeleton,    [libskeleton.a])
+MYSQL_PLUGIN_DYNAMIC(skeleton,   [ha_skeleton.la])
