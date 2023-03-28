@@ -161,8 +161,6 @@ char *log_indent(MEI *mei) // Log prefix for this thread
 static void logfile_init_once(void)
 {
   const char *logfilename = "../bucket.log";
-  static int sanity = 1;
-
   rename("../bucket.log.1", "../bucket.log.2");
   rename("../bucket.log.0", "../bucket.log.1");
   rename("../bucket.log", "../bucket.log.0");
@@ -174,10 +172,7 @@ static void logfile_init_once(void)
   int mode = (S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   chmod(logfilename, mode);
   fprintf(logfile, "Logfile inited!\n");
-  if (!sanity)
-    fprintf(logfile, "WEeeeeird\n");
   fflush(logfile);
-  sanity = 0;
 }
 
 void logfile_init(void)
