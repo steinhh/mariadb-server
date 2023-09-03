@@ -14,10 +14,11 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 /*
-  CREATE FUNCTION bmp_join RETURNS INTEGER SONAME "udfs.so";
-  CREATE FUNCTION bmp_union RETURNS INTEGER SONAME "udfs.so";
-  CREATE FUNCTION sar_pick_bmp RETURNS INTEGER SONAME "udfs.so";
-  CREATE FUNCTION bmp_sar_in_match RETURNS INTEGER SONAME "udfs.so";
+  CREATE FUNCTION bmp_join RETURNS INTEGER SONAME "ha_udfs.so";
+  CREATE FUNCTION bmp_union RETURNS INTEGER SONAME "ha_udfs.so";
+  CREATE FUNCTION sar_pick_bmp RETURNS INTEGER SONAME "ha_udfs.so";
+  CREATE FUNCTION bmp_sar_in_match RETURNS INTEGER SONAME "ha_udfs.so";
+  Dropping:
   DROP FUNCTION bmp_join;
 */
 #include "all-mysql-includes.h"
