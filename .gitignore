@@ -234,7 +234,6 @@ storage/perfschema/pfs_config.h
 storage/rocksdb/ldb
 storage/rocksdb/myrocks_hotbackup
 storage/rocksdb/mysql_ldb
-storage/rocksdb/myrocks_hotbackup
 storage/rocksdb/rdb_source_revision.h
 storage/rocksdb/sst_dump
 storage/tokudb/PerconaFT/buildheader/db.h
@@ -638,3 +637,4 @@ tests/mariadb-client-test
 versioninfo_dll.rc
 versioninfo_exe.rc
 win/packaging/ca/symlinks.cc
+/storage/bitmap
