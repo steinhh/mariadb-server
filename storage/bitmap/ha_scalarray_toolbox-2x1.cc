@@ -1,6 +1,0 @@
-#include "ha_scalarray_toolbox.cc"
-#include "scalarrbucket.cc"
-template class ha_scalarray_toolbox<uint16, uchar8>;
-template class scalarrbucket<uint16, uchar8>;
-template class ha_scalarray_toolbox<uint16, schar8>;
-template class scalarrbucket<uint16, schar8>;
